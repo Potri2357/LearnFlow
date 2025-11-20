@@ -30,19 +30,23 @@ import re
 import traceback
 from datetime import timezone as dt_timezone
 
-from google import genai
+import google.generativeai as genai
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 GEMINI_API_URL = os.environ.get("GEMINI_API_URL")
 
-client = genai.Client(api_key=GEMINI_API_KEY)
+genai.configure(api_key=GEMINI_API_KEY)
 
-def get_current_user():
+def get_current_user(request=None):
+    """Get the current authenticated user or fallback to first user"""
+    if request and hasattr(request, 'user') and request.user.is_authenticated:
+        return request.user
+    # Fallback for views that don't pass request
     return User.objects.first()
 
-def get_user():
-    # placeholder - swap with request.user when you add authentication
-    return User.objects.first()
+def get_user(request=None):
+    """Alias for get_current_user for backward compatibility"""
+    return get_current_user(request)
 
 
 def call_gemini_generate(prompt):
@@ -730,10 +734,8 @@ Rules:
 - Be concise and actionable
 """
 
-        result = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt
-        )
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        result = model.generate_content(prompt)
 
         # get text robustly
         try:
@@ -1173,21 +1175,23 @@ Content:
 \"\"\"{content}\"\"\"
 """
 
-        result = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt
-        )
 
-        # Some client responses may be in .text or a nested structure; handle both
+        # Use the call_gemini_generate function which has the correct API format
+        response_data = call_gemini_generate(prompt)
+        
+        # Extract text from response
         raw_text = None
-        try:
-            raw_text = result.text
-        except Exception:
-            # fallback to nested candidate content (safe)
+        if isinstance(response_data, dict):
             try:
-                raw_text = result.candidates[0].content.parts[0].text
-            except Exception:
-                raw_text = str(result)
+                raw_text = response_data["candidates"][0]["content"]["parts"][0]["text"]
+            except (KeyError, IndexError):
+                try:
+                    # Fallback: try to get text directly
+                    raw_text = response_data.get("text", str(response_data))
+                except Exception:
+                    raw_text = str(response_data)
+        else:
+            raw_text = str(response_data)
 
         cleaned = raw_text.strip().replace("```json", "").replace("```", "").strip()
 
@@ -1232,8 +1236,74 @@ Content:
 
 
 
+# ============================================
+# AUTHENTICATION VIEWS
+# ============================================
+
+from rest_framework import generics, permissions, status
+from rest_framework.views import APIView
+from .serializers import RegisterSerializer, UserProfileSerializer, NotificationSerializer, UserSerializer
+
+class RegisterView(generics.CreateAPIView):
+    """
+    POST /api/auth/register/
+    Register a new user
+    """
+    serializer_class = RegisterSerializer
+    permission_classes = [permissions.AllowAny]
 
 
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    """
+    GET/PUT /api/profile/
+    Get or update user profile
+    """
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user.profile
+
+
+class NotificationListView(generics.ListAPIView):
+    """
+    GET /api/notifications/
+    List all notifications for the authenticated user
+    """
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user).order_by('-created_at')
+
+
+class NotificationMarkReadView(APIView):
+    """
+    POST /api/notifications/<id>/mark-read/
+    Mark a notification as read
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            notification = Notification.objects.get(pk=pk, user=request.user)
+            notification.is_read = True
+            notification.save()
+            return Response({'status': 'notification marked as read'})
+        except Notification.DoesNotExist:
+            return Response({'error': 'Notification not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class CurrentUserView(APIView):
+    """
+    GET /api/auth/me/
+    Get current authenticated user info
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
 
 
 

@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 from .models import LectureNote, Question, TopicWeakness, UserAnswer, UserProgress
-from .models import TopicMastery, UserStreak
+from .models import TopicMastery, UserStreak, UserProfile, Notification
 from .models import StudyPlan
 
 
@@ -44,8 +44,22 @@ class UserAnswerAdmin(admin.ModelAdmin):
 class UserProgressAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "total_questions", "correct_answers")
     search_fields = ("user__username",)
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "bio")
+    search_fields = ("user__username",)
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "message", "is_read", "created_at")
+    list_filter = ("is_read", "created_at")
+    search_fields = ("user__username", "message")
     
 admin.site.register(TopicMastery)
 admin.site.register(UserStreak)
 admin.site.register(StudyPlan)
+
 
