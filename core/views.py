@@ -1,45 +1,47 @@
-from django.shortcuts import render
-
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from .models import LectureNote, Question, UserAnswer, TopicWeakness, UserProgress
-from .serializers import LectureNoteSerializer, QuestionSerializer, UserAnswerSerializer
-from django.contrib.auth.models import User
-from .ml_utils import extract_topics
-from .models import TopicWeakness
-import random
-import os
-import requests
-import random
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from django.contrib.auth.models import User
-from .models import LectureNote, Question, TopicWeakness, UserAnswer
-from .serializers import QuestionSerializer
-from .ml_utils import extract_topics  # if you still use it
-import math
-from django.utils import timezone
-from rest_framework import status
-from .models import TopicMastery, UserStreak , StudyPlan
-from django.db.models import Avg, Count, Q
-from django.utils import timezone
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-import datetime
-import json
+from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.conf import settings
-import re 
-from core.models import LectureNote, UserProgress, TopicWeakness
-import requests
-from django.shortcuts import get_object_or_404
+from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from django.db import models
+from django.db.models import Avg, Count, Q
 
+from rest_framework.decorators import api_view, parser_classes
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.response import Response
+from rest_framework import status
+
+from .models import (
+    LectureNote, Question, UserAnswer, TopicWeakness,
+    TopicMastery, UserStreak, StudyPlan, UserProgress
+)
+from .serializers import LectureNoteSerializer, QuestionSerializer, UserAnswerSerializer
+from .ml_utils import extract_topics
+from .utils import extract_text_from_pdf
+
+import os
+import random
+import requests
+import math
+import datetime
+import json
+import re
+import traceback
+from datetime import timezone as dt_timezone
+
+from google import genai
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 GEMINI_API_URL = os.environ.get("GEMINI_API_URL")
 
+client = genai.Client(api_key=GEMINI_API_KEY)
+
 def get_current_user():
+    return User.objects.first()
+
+def get_user():
+    # placeholder - swap with request.user when you add authentication
     return User.objects.first()
 
 
@@ -47,7 +49,7 @@ def call_gemini_generate(prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
 
     headers = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/jso"
     }
 
     payload = {
@@ -67,81 +69,30 @@ def call_gemini_generate(prompt):
     return response.json()
 
 
-@api_view(["POST"])
-def generate_mcqs(request):
-    note_id = request.data.get("note_id")
-    count = int(request.data.get("count", 10))
-
-    note = LectureNote.objects.get(id=note_id)
-
-    prompt = f"""
-Generate {count} multiple-choice questions (MCQs) from the following text.
-Return ONLY a JSON array in this format:
-
-[
-  {{
-    "question": "text",
-    "options": ["A", "B", "C", "D"],
-    "correct": 0,
-    "explanation": "short explanation",
-    "difficulty": 0.4
-  }}
-]
-
-Content:
-\"\"\"{note.content}\"\"\"
-"""
-
-    try:
-        result = call_gemini_generate(prompt)
-        raw = result["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception as e:
-        return Response({"error": "Gemini request failed", "details": str(e)}, status=500)
-
-    # Extract JSON array using regex
-    import json, re
-    match = re.search(r'\[.*\]', raw, re.DOTALL)
-    if not match:
-        return Response({"error": "Could not parse JSON", "raw": raw}, status=500)
-
-    try:
-        mcqs = json.loads(match.group(0))
-    except:
-        return Response({"error": "Invalid JSON format", "raw": raw}, status=500)
-
-    # Save MCQs to database
-    saved = []
-    for item in mcqs:
-        opts = item.get("options", [])
-        while len(opts) < 4:
-            opts.append("")
-
-        correct_letter = ["A", "B", "C", "D"][ item.get("correct", 0) ]
-
-        q = Question.objects.create(
-            lecture_note=note,
-            question_text=item.get("question", ""),
-            option_a=opts[0],
-            option_b=opts[1],
-            option_c=opts[2],
-            option_d=opts[3],
-            correct_option=correct_letter,
-            explanation=item.get("explanation", ""),
-            difficulty=float(item.get("difficulty", 0.5))
-        )
-        saved.append(QuestionSerializer(q).data)
-
-    return Response({"questions": saved})
-
 
 @api_view(['GET'])
 def get_quiz_questions(request, note_id):
     """
-    Returns all MCQs for a given lecture note.
+    Returns up to `n` MCQs for a given lecture note.
+    Query param: ?n=10  (default 10)
     """
-    qs = Question.objects.filter(lecture_note_id=note_id)
-    data = QuestionSerializer(qs, many=True).data
-    return Response({"questions": data})
+    try:
+        n = int(request.GET.get("n", 20))
+    except:
+        n = 20
+
+    # Try adaptive selection first (if available)
+    try:
+        user = get_current_user()
+        selected_questions = select_adaptive_questions(note_id, user, n=n)
+        qs_data = QuestionSerializer(selected_questions, many=True).data
+        return Response({"questions": qs_data})
+    except Exception:
+        # Fallback: return the first n saved questions (ordered by created_at)
+        qs = Question.objects.filter(lecture_note_id=note_id).order_by("created_at")[:n]
+        data = QuestionSerializer(qs, many=True).data
+        return Response({"questions": data})
+
 
 @api_view(['POST'])
 def submit_mcq_answer(request):
@@ -182,13 +133,13 @@ def upload_lecture_note(request):
     title = request.data.get("title")
     content = request.data.get("content")
 
+    # ❗ Remove user=user
     note = LectureNote.objects.create(
-        user=user,
         title=title,
         content=content
     )
 
-    # extract topics automatically
+    # Now extract topics and save weakness
     topics = extract_topics(content)
 
     for topic in topics:
@@ -204,6 +155,7 @@ def upload_lecture_note(request):
         "note_id": note.id,
         "topics": topics
     })
+
 
 
 # API 2: Generate 20 Questions From Lecture Notes without ml
@@ -354,13 +306,20 @@ def submit_answer(request):
 @api_view(['GET'])
 def weak_topics(request):
     user = User.objects.first()
+    note_id = request.GET.get("note_id")
 
-    latest_note = LectureNote.objects.filter(user=user).last()
+    if not note_id:
+        return Response({"error": "note_id is required"}, status=400)
+
+    try:
+        note = LectureNote.objects.get(id=note_id)
+    except LectureNote.DoesNotExist:
+        return Response({"error": "Invalid note_id"}, status=404)
+
     weaknesses = TopicWeakness.objects.filter(
         user=user,
-        lecture_note=latest_note
+        lecture_note=note
     ).order_by('-weakness_score')
-
 
     data = [
         {"topic": w.topic, "score": w.weakness_score}
@@ -368,6 +327,9 @@ def weak_topics(request):
     ]
 
     return Response({"weak_topics": data})
+
+
+
 
 # API 5: Get Progress
 @api_view(['GET'])
@@ -542,306 +504,438 @@ def adaptive_quiz_start(request):
 def submit_mcq_answer(request):
     """
     POST { "question_id": <id>, "selected_option": "A" }
-    Updates DB and topic mastery adaptively.
+    Updates UserAnswer + TopicMastery + TopicWeakness + UserProgress
     """
-    user = get_user()
-    qid = request.data.get("question_id")
-    sel = request.data.get("selected_option")
     try:
-        question = Question.objects.get(id=qid)
-    except Question.DoesNotExist:
-        return Response({"error": "Invalid question id"}, status=400)
+        user = get_user()
+        qid = request.data.get("question_id")
+        sel = request.data.get("selected_option","").strip().upper()
+        if not qid:
+            return Response({"error":"question_id required"}, status=400)
 
-    is_correct = False
-    if question.correct_option:
-        is_correct = (sel.upper() == question.correct_option.upper())
+        question = get_object_or_404(Question, id=qid)
+        is_correct = (sel == (question.correct_option or "").upper())
 
-    # Save user answer
-    ua = UserAnswer.objects.create(
-        user=user,
-        question=question,
-        user_answer=sel,
-        is_correct=is_correct
-    )
+        ua = UserAnswer.objects.create(
+            user=user,
+            question=question,
+            user_answer=sel,
+            is_correct=is_correct
+        )
 
-    # Determine related topics for this question:
-    # We use the TopicMastery rows for this lecture note; if none, fall back to TopicWeakness topics.
-    topics = list(TopicMastery.objects.filter(user=user, lecture_note=question.lecture_note).values_list('topic', flat=True))
-    if not topics:
-        # fallback
-        topics = list(TopicWeakness.objects.filter(user=user, lecture_note=question.lecture_note).values_list('topic', flat=True))
+        # Primary topic is question.topic
+        primary_topic = question.topic or "general"
 
-    # If still empty: try extracting topics from question text (use ml_utils.extract_topics)
-    if not topics:
-        try:
-            topics = extract_topics(question.question_text)
-        except Exception:
-            topics = []
-
-    # update mastery per topic (distribute delta across topics)
-    if topics:
-        # base delta magnitude depending on difficulty
-        # easier questions less effect, harder questions more effect
-        qdiff = float(getattr(question, "difficulty", 0.5))
-        # learning rate factor
-        lr = 0.08  # base learning rate
+        # update topic mastery
+        tm, created = TopicMastery.objects.get_or_create(user=user, lecture_note=question.lecture_note, topic=primary_topic, defaults={"mastery":0.30})
+        # learning rate based on difficulty
+        qdiff = float(question.difficulty or 0.5)
+        lr = 0.08
         if qdiff > 0.7:
             lr = 0.12
         elif qdiff < 0.35:
             lr = 0.05
 
-        # adjust sign
         if is_correct:
-            # increase mastery, scaled by how much room to improve
-            for t in topics:
-                # compute delta as lr * (1 - current_mastery)
-                curr = TopicMastery.objects.filter(user=user, lecture_note=question.lecture_note, topic=t).first()
-                curr_mastery = curr.mastery if curr else 0.3
-                delta = lr * (1.0 - curr_mastery)
-                update_topic_mastery(user, question.lecture_note, t, delta)
+            delta = lr * (1.0 - tm.mastery)
         else:
-            # wrong answer reduces mastery modestly
-            for t in topics:
-                curr = TopicMastery.objects.filter(user=user, lecture_note=question.lecture_note, topic=t).first()
-                curr_mastery = curr.mastery if curr else 0.3
-                delta = - (lr * 0.6) * curr_mastery  # reduce proportional to current mastery
-                update_topic_mastery(user, question.lecture_note, t, delta)
+            delta = - (lr * 0.6) * tm.mastery
 
-    # update streaks
-    # pick primary topic (first in topics) if exists, else None
-    primary_topic = topics[0] if topics else None
-    global_streak, topic_streak = set_user_streak(user, primary_topic, is_correct)
+        tm.mastery = max(0.0, min(1.0, tm.mastery + delta))
+        tm.save()
 
-    # Also keep TopicWeakness in sync: increment weakness score for wrong
-    if not is_correct:
-        tws = TopicWeakness.objects.filter(lecture_note=question.lecture_note, user=user)
-        for tw in tws:
-            tw.weakness_score += 0.2
+        # Update TopicWeakness (increase when wrong)
+        tw, _ = TopicWeakness.objects.get_or_create(user=user, lecture_note=question.lecture_note, topic=primary_topic, defaults={"weakness_score": 0.0})
+        if not is_correct:
+            tw.weakness_score = round(tw.weakness_score + 0.2, 3)
+            tw.save()
+        else:
+            # small decay in weakness if correct
+            tw.weakness_score = max(0.0, round(tw.weakness_score - 0.08, 3))
             tw.save()
 
-    # Update UserProgress model (optional)
-    up, _ = UserProgress.objects.get_or_create(user=user)
-    up.total_questions += 1
-    if is_correct:
-        up.correct_answers += 1
-    up.save()
+        #optional: Update aggregate user progress (if you have a model)
+        up, _ = UserProgress.objects.get_or_create(user=user)
+        up.total_questions += 1
+        if is_correct:
+             up.correct_answers += 1
+        up.save()
 
-    return Response({
-        "correct": is_correct,
-        "correct_option": question.correct_option,
-        "current_mastery": { t: TopicMastery.objects.filter(user=user, lecture_note=question.lecture_note, topic=t).first().mastery for t in topics } if topics else {}
-    })
+        return Response({
+            "correct": is_correct,
+            "correct_option": question.correct_option,
+            "updated_mastery": { primary_topic: tm.mastery },
+            "weakness_score": tw.weakness_score
+        })
+
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)
+
+
+def parse_numbered_sections(text):
+    """
+    Parse a plan that has numbered sections:
+      1. Strength Topics:
+      2. Weak Topics to Focus On:
+      3. Recommended Learning Resources:
+         Articles:
+         Videos:
+         Explanations:
+      4. Practice Plan:
+      5. Revision Plan:
+      6. Next Assessment:
+    Return dict of named sections (strings)
+    """
+    # normalize newlines
+    text = text.replace("\r\n", "\n")
+
+    # main section headings (only these trigger a section change)
+    main_headings = [
+        ("strengths", ["strength topics", "strengths", "strength topic", "strength"]),
+        ("weak", ["weak topics", "weak topics to focus on", "weak", "weaknesses", "weak topics to focus"]),
+        ("resources", ["recommended learning resources", "recommended resources", "resources"]),
+        ("practice", ["practice plan", "practice", "practice plan:"]),
+        ("revision", ["revision plan", "revision"]),
+        ("assessment", ["next assessment", "next assessment:", "assessment"]),
+    ]
+
+    # Prepare mapping
+    mapping = {k: [] for k, _ in main_headings}
+
+    current = None
+
+    for raw_line in text.split("\n"):
+        line = raw_line.strip()
+        if not line:
+            # preserve blank lines as separator
+            if current:
+                mapping[current].append("")
+            continue
+
+        low = line.lower()
+
+        # detect MAIN heading lines (with or without leading number)
+        found = False
+        for key, tokens in main_headings:
+            for tok in tokens:
+                # match patterns like '1. Strength Topics:' or 'Strength Topics:' or 'Strength Topics'
+                if low.startswith(tok) or re.match(r"^\d+\.\s*" + re.escape(tok), low):
+                    # capture any text after the ':' on the same line
+                    # e.g., '3. Recommended Learning Resources: Articles:' -> keep 'Articles:' as next content
+                    parts = re.split(r":\s*", raw_line, maxsplit=1)
+                    if len(parts) > 1 and parts[1].strip():
+                        mapping[key].append(parts[1].strip())
+                    current = key
+                    found = True
+                    break
+            if found:
+                break
+
+        if found:
+            continue
+
+        # not a main heading line: append to current section if any
+        # (this includes subheadings like "Articles:", "Videos:", "Easy:", "Medium:" which stay under current section)
+        if current:
+            mapping[current].append(raw_line.rstrip())
+
+    # join lines into text blocks
+    result = {k: "\n".join([l for l in v]).strip() for k, v in mapping.items()}
+
+    return result
 
 @api_view(['POST'])
 def generate_study_plan(request):
-    user = User.objects.first()  # Replace with request.user when auth added
-    note_id = request.data.get("note_id")
-
+    """
+    Build study plan using current mastery + weak topics and call Gemini (same client).
+    """
     try:
-        note = LectureNote.objects.get(id=note_id)
-    except LectureNote.DoesNotExist:
-        return Response({"error": "Invalid note_id"}, status=400)
+        note_id = request.data.get("note_id")
+        note = get_object_or_404(LectureNote, id=note_id)
+        user = get_user()
 
-    # 1. Topic Mastery
-    mastery = list(TopicMastery.objects.filter(user=user, lecture_note=note)
-                   .values("topic", "mastery"))
+        mastery_qs = TopicMastery.objects.filter(user=user, lecture_note=note)
+        strengths = {m.topic: round(m.mastery, 2) for m in mastery_qs if m.mastery >= 0.65}
+        weak_topics = {m.topic: round(m.mastery, 2) for m in mastery_qs if m.mastery < 0.45}
 
-    # 2. Weaknesses
-    weaknesses = list(TopicWeakness.objects.filter(user=user, lecture_note=note)
-                      .values("topic", "weakness_score"))
+        # Safe fallback (so LLM always has something)
+        if not strengths:
+            strengths = {"General understanding": 0.30}
+        if not weak_topics:
+            weak_topics = {"Key concepts to practice": 0.25}
 
-    # 3. Recent mistakes
-    recent_answers = UserAnswer.objects.filter(user=user).order_by('-answered_at')[:30]
-    mistakes = []
-    for a in recent_answers:
-        if not a.is_correct:
-            mistakes.append(a.question.question_text)
+        strengths_text = "\n".join([f"- {k}: mastery {v}" for k,v in strengths.items()])
+        weaknesses_text = "\n".join([f"- {k}: mastery {v}" for k,v in weak_topics.items()])
 
-    # 4. Prepare summary
-    summary = {
-        "lecture_title": note.title,
-        "mastery": mastery,
-        "weaknesses": weaknesses,
-        "mistakes": mistakes,
-    }
+        prompt = f"""
+You are an AI tutor. Generate a structured study plan for the student based on the data below.
 
-    # 5. Gemini Request
-    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-    url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+Lecture note: {note.title}
 
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {GEMINI_API_KEY}"
-    }
+Strength Topics:
+{strengths_text}
 
+Weak Topics:
+{weaknesses_text}
 
+Requirements:
+- Return EXACTLY this STRUCTURE below, nothing else.
+1. Strength Topics:
+- <topic>: why student is strong (1-2 sentences)
 
-    payload = {
-        "model": "gemini-2.0-flash",
-        "messages": [
-            {
-                "role": "user",
-                "content": f"""
-You are an AI tutor. Create a detailed personalized study plan based on this data:
+2. Weak Topics to Focus On:
+- <topic>: short explanation why weak (1-2 sentences)
 
-{summary}
+3. Recommended Learning Resources:
+Articles:
+- <article1>
+- <article2>
+- <article3> 
+(atleast 3 points)
+Videos:
+- <video1>
+- <video2>
+(atleast 3 points)
+Explanations:
+- <explain1>
+- <explain2>
+(atleast 3 points)
 
-Your output must follow this EXACT structure:
-
-STUDY PLAN
------------
-1. Weak Topics to Focus On:
-   - <topic>: Explanation + why student is weak
-
-2. Recommended Learning Resources:
-   - Videos, articles, short explanations
-
-3. Practice Plan:
+4. Practice Plan:
 Easy:
-- (at least 3 tasks)
+- <task1>
+- <task2>
+- <task3>
 Medium:
-- (at least 3 tasks)
+- <task1>
+- <task2>
+- <task3>
 Hard:
-- (at least 3 tasks)
+- <task1>
+- <task2>
+- <task3>
 
-Make sure each difficulty level has at least 3 bullet points.
-NEVER leave them empty.
+5. Revision Plan:
+- <item1>
+- <item2>
 
-4. Revision Plan:
-   - Summary tasks, quick notes, important points
+6. Next Assessment:
+- <recommendation1>
+- <recommendation2>
 
-5. Next Assessment:
-   - Adaptive quiz recommendation
-
-Return the plan as pure text. Do NOT add JSON.
+Rules:
+- No markdown, no code block, no JSON
+- Provide at least 2 items per list
+- Be concise and actionable
 """
+
+        result = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+
+        # get text robustly
+        try:
+            plan_text = result.text
+        except Exception:
+            try:
+                plan_text = result.candidates[0].content.parts[0].text
+            except:
+                plan_text = str(result)
+
+        # clean obvious wrappers
+        plan_text = plan_text.replace("```", "").strip()
+
+        # parse into structured sections for frontend
+        try:
+            plan_sections = parse_numbered_sections(plan_text)
+        except Exception:
+            plan_sections = {
+                "strengths": "",
+                "weak": "",
+                "resources": "",
+                "practice": "",
+                "revision": "",
+                "assessment": "",
             }
-        ],
-        "max_tokens": 1200,
-        "temperature": 0.3
-    }
 
-    response = requests.post(url, json=payload, headers=headers)
-    data = response.json()
+        # Return both new and backward-compatible keys
+        return Response({
+            "plan": plan_text,
+            "plan_sections": plan_sections,
+            "sections": plan_sections,  # legacy alias
+            "strengths": strengths,
+            "weak_topics": weak_topics,
+        })
 
-# Try OpenAI-style
-    plan_text = None
-    try:
-        plan_text = data["choices"][0]["message"]["content"]
-    except:
-        pass
-
-# Try Gemini-native
-    if plan_text is None:
-        try:
-            plan_text = data["candidates"][0]["content"]["parts"][0]["text"]
-        except:
-            pass
-
-# Try Gemini list root
-    if plan_text is None:
-        try:
-            plan_text = data[0]["candidates"][0]["content"]["parts"][0]["text"]
-        except:
-            pass
-
-    if plan_text is None:
-        return Response({"error": "Unable to parse Gemini response", "raw": data}, status=500)
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": "Study plan generation failed", "details": str(e)}, status=500)
 
 
-    # Save plan
-    StudyPlan.objects.create(user=user, lecture_note=note, plan_text=plan_text)
-    return Response({"plan": plan_text})
+
+
+
 
 @api_view(["GET"])
 def analytics_for_note(request, note_id):
-    """
-    GET /api/analytics/<note_id>/
-    Returns:
-      - mastery_score (0-100)
-      - topic_mastery: [{topic, mastery}]
-      - top_weak_topics: [{topic, mastery, weakness_score}]
-      - difficulty_accuracy: {easy: {correct, total, acc}, medium: {...}, hard: {...}}
-      - accuracy_trend_last7: [{date, accuracy}]  -> overall accuracy per day (last 7 days)
-      - recent_sessions: [{ts, question, is_correct, difficulty}]
-      - study_plans: [{created_at, snippet}]
-    """
     user = get_current_user()
+
     try:
         note = LectureNote.objects.get(id=note_id)
     except LectureNote.DoesNotExist:
         return Response({"error": "invalid note_id"}, status=400)
 
-    # 1) Topic mastery list
+    # -------------------------------------------------------
+    # 1) TOPIC MASTERY (improved)
+    # -------------------------------------------------------
     tm_qs = TopicMastery.objects.filter(user=user, lecture_note=note)
-    topic_mastery = [
-        {"topic": t.topic, "mastery": round(t.mastery, 3), "last_updated": t.last_updated}
-        for t in tm_qs
-    ]
+
+    topic_mastery = []
+    for t in tm_qs:
+        topic_mastery.append({
+            "topic": t.topic,
+            "mastery": round(t.mastery, 3),
+            "last_updated": t.last_updated,
+        })
+
+    return Response({
+        "topic_mastery": topic_mastery
+    })
+
+@api_view(['GET'])
+def get_note_details(request, note_id):
+    """
+    Returns details about a lecture note, including the total number of available questions.
+    """
+    try:
+        note = LectureNote.objects.get(id=note_id)
+        question_count = Question.objects.filter(lecture_note=note).count()
+        return Response({
+            "id": note.id,
+            "title": note.title,
+            "question_count": question_count
+        })
+    except LectureNote.DoesNotExist:
+        return Response({"error": "Note not found"}, status=404)
+
+    # Weighted mastery score
     mastery_score = 0.0
     if topic_mastery:
-        mastery_score = sum([t["mastery"] for t in topic_mastery]) / len(topic_mastery) * 100
+        mastery_score = (
+            sum([t["mastery"] * 1.2 for t in topic_mastery]) /
+            len(topic_mastery)
+        ) * 100
 
-    # 2) top weak topics (use TopicWeakness if available, else by mastery ascending)
-    tw_qs = TopicWeakness.objects.filter(user=user, lecture_note=note).order_by("-weakness_score")[:8]
-    if tw_qs.exists():
-        top_weak = [{"topic": t.topic, "weakness_score": round(t.weakness_score, 3)} for t in tw_qs[:5]]
-    else:
-        sorted_by_mastery = sorted(topic_mastery, key=lambda x: x["mastery"])[:5]
-        top_weak = [{"topic": t["topic"], "mastery": t["mastery"]} for t in sorted_by_mastery]
+    # -------------------------------------------------------
+    # 2) WEAK TOPICS (improved accuracy)
+    # -------------------------------------------------------
+    tw_qs = TopicWeakness.objects.filter(user=user, lecture_note=note)
 
-    # 3) Difficulty accuracy buckets based on question difficulty
+    # Only consider topics with real activity
+    active_weak = []
+    for tw in tw_qs:
+        # Normalize weakness
+        score = min(max(tw.weakness_score, 0), 5)
+        active_weak.append({
+            "topic": tw.topic,
+            "weakness_score": round(score, 2),
+        })
+
+    # Sort highest weakness first
+    active_weak.sort(key=lambda x: x["weakness_score"], reverse=True)
+
+    top_weak = active_weak[:5]
+
+    # -------------------------------------------------------
+    # 3) DIFFICULTY ACCURACY (major improvement)
+    # -------------------------------------------------------
     answers = UserAnswer.objects.filter(user=user, question__lecture_note=note)
-    def bucket_stats(qs, low, high):
-        subset = qs.filter(question__difficulty__gte=low, question__difficulty__lt=high)
-        total = subset.count()
-        correct = subset.filter(is_correct=True).count()
-        acc = (correct / total) * 100 if total else None
-        return {"total": total, "correct": correct, "accuracy": round(acc,2) if acc is not None else None}
 
-    diff_easy = bucket_stats(answers, 0.0, 0.4)
-    diff_med  = bucket_stats(answers, 0.4, 0.7)
-    diff_hard = bucket_stats(answers, 0.7, 1.1)
+    def bucket(low, high):
+        qset = answers.filter(
+            question__difficulty__gte=low,
+            question__difficulty__lt=high
+        )
+        total = qset.count()
+        correct = qset.filter(is_correct=True).count()
+        accuracy = (correct * 100 / total) if total else None
+        return {
+            "total": total,
+            "correct": correct,
+            "accuracy": round(accuracy, 2) if accuracy is not None else None,
+        }
 
-    # 4) accuracy trend last 7 days (overall)
+    difficulty_accuracy = {
+        "easy": bucket(0.0, 0.4),
+        "medium": bucket(0.4, 0.7),
+        "hard": bucket(0.7, 1.1),
+    }
+
+    # -------------------------------------------------------
+    # 4) ACCURACY TREND (actual 7-day performance)
+    # -------------------------------------------------------
     today = timezone.now().date()
     trend = []
-    for i in range(6, -1, -1):  # 6 days ago ... today
-        d = today - datetime.timedelta(days=i)
-        day_start = datetime.datetime.combine(d, datetime.time.min).replace(tzinfo=datetime.timezone.utc)
-        day_end = datetime.datetime.combine(d, datetime.time.max).replace(tzinfo=datetime.timezone.utc)
-        day_qs = answers.filter(answered_at__range=(day_start, day_end))
-        total = day_qs.count()
-        correct = day_qs.filter(is_correct=True).count()
-        acc = (correct / total)*100 if total else None
-        trend.append({"date": d.isoformat(), "accuracy": round(acc,2) if acc is not None else None, "total": total})
 
-    # 5) recent sessions (last 20 answers)
-    recent = list(answers.order_by("-answered_at")[:20].values("answered_at", "is_correct", "question__question_text", "question__difficulty"))
+    for i in range(6, -1, -1):
+        day = today - datetime.timedelta(days=i)
+
+        start = datetime.datetime.combine(
+        day, datetime.time.min, tzinfo=dt_timezone.utc
+        )
+        end = datetime.datetime.combine(
+        day, datetime.time.max, tzinfo=dt_timezone.utc
+        )
+
+        qs = answers.filter(answered_at__range=(start, end))
+        total = qs.count()
+        correct = qs.filter(is_correct=True).count()
+
+        acc = (correct * 100 / total) if total else None
+
+        trend.append({
+            "date": day.isoformat(),
+            "accuracy": round(acc, 2) if acc is not None else None,
+            "total": total,
+        })
+
+    # -------------------------------------------------------
+    # 5) RECENT SESSIONS
+    # -------------------------------------------------------
+    recent = list(
+        answers.order_by("-answered_at")[:20].values(
+            "answered_at",
+            "is_correct",
+            "question__question_text",
+            "question__difficulty"
+        )
+    )
+
     recent_sessions = [
         {
             "ts": r["answered_at"],
-            "question": (r["question__question_text"][:120] + ("..." if len(r["question__question_text"])>120 else "")) if r["question__question_text"] else "",
+            "question": (
+                r["question__question_text"][:120] + "..."
+                if len(r["question__question_text"]) > 120
+                else r["question__question_text"]
+            ),
+            "difficulty": float(r["question__difficulty"]),
             "is_correct": r["is_correct"],
-            "difficulty": round(r["question__difficulty"] or 0.5, 2)
-        } for r in recent
+        }
+        for r in recent
     ]
 
-    # 6) recent study plans
-    plans = StudyPlan.objects.filter(user=user, lecture_note=note).order_by("-created_at")[:6]
-    study_plans = [{"created_at": p.created_at, "snippet": p.plan_text[:300] + ("..." if len(p.plan_text)>300 else "")} for p in plans]
-
-    payload = {
-        "mastery_score": round(mastery_score,2),
+    return Response({
+        "mastery_score": round(mastery_score, 2),
         "topic_mastery": topic_mastery,
         "top_weak_topics": top_weak,
-        "difficulty_accuracy": {"easy": diff_easy, "medium": diff_med, "hard": diff_hard},
+        "difficulty_accuracy": difficulty_accuracy,
         "accuracy_trend_last7": trend,
         "recent_sessions": recent_sessions,
-        "study_plans": study_plans
-    }
+    })
 
-    return Response(payload)
 
 
 @api_view(["GET"])
@@ -902,11 +996,6 @@ def next_actions(request):
 
 @api_view(["GET"])
 def ai_insights(request, note_id):
-    import requests
-    import json
-    from django.conf import settings
-    from django.db import models
-    from core.models import UserProgress, TopicWeakness
 
     # -----------------------------
     # Build Analytics from DB
@@ -967,7 +1056,7 @@ Rules:
     # -----------------------------
     url = (
         "https://generativelanguage.googleapis.com/v1/models/"
-        "gemini-2.5-flash:generateContent?key=" + settings.GEMINI_API_KEY
+        "gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY
     )
 
     payload = {
@@ -991,9 +1080,152 @@ Rules:
         print("GEMINI ERROR:", e)
         return Response({"insights": ""})
 
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def upload_pdf(request):
+    """
+    Upload PDF, extract text, save LectureNote, seed topics in TopicWeakness and TopicMastery
+    """
+    try:
+        user = get_user()
+        title = request.data.get("title", request.FILES.get("file").name if request.FILES.get("file") else "Untitled")
+        file_obj = request.FILES.get("file")
+        if not file_obj:
+            return Response({"error": "No PDF uploaded"}, status=400)
+
+        extracted_text = extract_text_from_pdf(file_obj)
+
+        note = LectureNote.objects.create(
+            user=user,
+            title=title,
+            file=file_obj,
+            content=extracted_text
+        )
+
+        # extract topics and seed weakness + mastery
+        topics = extract_topics(extracted_text)
+
+        if not topics:
+            topics = ["general"]
+
+        for topic in topics:
+            TopicWeakness.objects.create(user=user, lecture_note=note, topic=topic, weakness_score=0.0)
+            TopicMastery.objects.get_or_create(user=user, lecture_note=note, topic=topic, defaults={"mastery": 0.30})
+
+        serializer = LectureNoteSerializer(note)
+        return Response({"note_id": note.id, "topics": topics, "message": "PDF uploaded + topics saved", "note": serializer.data}, status=201)
+
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)
 
 
 
+
+def extract_json_array(text: str):
+    """
+    Bracket-counting extractor: returns the first complete JSON array string in text,
+    or None if no complete array found.
+    """
+    if not text:
+        return None
+    start = text.find('[')
+    if start == -1:
+        return None
+    bracket_count = 0
+    end_index = None
+    for i, ch in enumerate(text[start:], start):
+        if ch == '[':
+            bracket_count += 1
+        elif ch == ']':
+            bracket_count -= 1
+        if bracket_count == 0:
+            end_index = i
+            break
+    if end_index is None:
+        return None
+    return text[start:end_index+1]
+
+@api_view(['POST'])
+def generate_mcqs(request):
+    """
+    Generate MCQs via Gemini and persist questions including topic field.
+    Request body: { "note_id": <int>, "count": 10 }
+    """
+    try:
+        note_id = request.data.get("note_id")
+        count = int(request.data.get("count", 10))
+        note = get_object_or_404(LectureNote, id=note_id)
+        content = note.content or ""
+
+        prompt = f"""
+Generate exactly {count} high-quality multiple-choice questions (MCQs) covering the full content below.
+For each question, return a JSON object with these keys:
+- topic: short topic name (single phrase)
+- question: the question text
+- options: an array of 4 strings (A,B,C,D)
+- answer: the correct letter (A/B/C/D)
+- explanation: a 1-2 sentence explanation
+- difficulty: "easy" or "medium" or "hard"
+
+Return a JSON array ONLY (no markdown, no text before/after).
+Content:
+\"\"\"{content}\"\"\"
+"""
+
+        result = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+
+        # Some client responses may be in .text or a nested structure; handle both
+        raw_text = None
+        try:
+            raw_text = result.text
+        except Exception:
+            # fallback to nested candidate content (safe)
+            try:
+                raw_text = result.candidates[0].content.parts[0].text
+            except Exception:
+                raw_text = str(result)
+
+        cleaned = raw_text.strip().replace("```json", "").replace("```", "").strip()
+
+        # sometimes LLM prints extra text; attempt to find first JSON array
+        import re
+        m = re.search(r'\[.*\]', cleaned, flags=re.DOTALL)
+        json_str = m.group(0) if m else cleaned
+
+        mcqs = json.loads(json_str)
+
+        saved = []
+        for item in mcqs:
+            topic = item.get("topic") or (item.get("question").split()[0][:30] if item.get("question") else "general")
+            options = item.get("options", [])
+            # ensure 4 options
+            while len(options) < 4:
+                options.append("")
+            q = Question.objects.create(
+                lecture_note=note,
+                topic=topic,
+                question_text=item.get("question",""),
+                option_a=options[0],
+                option_b=options[1],
+                option_c=options[2],
+                option_d=options[3],
+                correct_option=item.get("answer","").strip().upper()[:1],
+                explanation=item.get("explanation",""),
+                difficulty=0.5 if item.get("difficulty") is None else (0.3 if item.get("difficulty")=="easy" else (0.6 if item.get("difficulty")=="medium" else 0.85))
+            )
+            saved.append(QuestionSerializer(q).data)
+            # Ensure TopicMastery exists for this topic
+            TopicMastery.objects.get_or_create(user=note.user or get_user(), lecture_note=note, topic=topic, defaults={"mastery": 0.30})
+
+        return Response({"generated_count": len(saved), "questions": saved})
+
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error":"Gemini request failed", "details": str(e)}, status=500)
 
 
 

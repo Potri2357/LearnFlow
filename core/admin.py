@@ -9,8 +9,7 @@ from .models import StudyPlan
 
 @admin.register(LectureNote)
 class LectureNoteAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "user", "uploaded_at")
-    search_fields = ("title", "content")
+    list_display = ("id", "title", "created_at")
 
 
 @admin.register(Question)

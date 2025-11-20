@@ -3,11 +3,15 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+from django.db import models
+from django.contrib.auth.models import User
+
 class LectureNote(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
-    title = models.CharField(max_length=200)
-    content = models.TextField()
-    uploaded_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    title = models.CharField(max_length=255)
+    file = models.FileField(upload_to='notes/', null=True, blank=True)
+    content = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.title
@@ -15,15 +19,14 @@ class LectureNote(models.Model):
 
 class Question(models.Model):
     lecture_note = models.ForeignKey(LectureNote, on_delete=models.CASCADE, related_name='questions')
+    topic = models.CharField(max_length=255, null=True, blank=True)  # NEW
     question_text = models.TextField()
 
-    # MCQ options
     option_a = models.TextField(null=True, blank=True)
     option_b = models.TextField(null=True, blank=True)
     option_c = models.TextField(null=True, blank=True)
     option_d = models.TextField(null=True, blank=True)
 
-    # Correct answer for MCQ
     correct_option = models.CharField(
         max_length=1,
         choices=[("A", "A"), ("B", "B"), ("C", "C"), ("D", "D")],
@@ -50,15 +53,30 @@ class TopicWeakness(models.Model):
         return f"{self.topic} ({self.weakness_score})"
 
 
+class TopicMastery(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    lecture_note = models.ForeignKey(LectureNote, on_delete=models.CASCADE)
+    topic = models.CharField(max_length=200)
+    mastery = models.FloatField(default=0.3)  # 0..1
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("user", "lecture_note", "topic")
+
+    def __str__(self):
+        return f"{self.topic}: {self.mastery:.2f}"
+
+
 class UserAnswer(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
-    user_answer = models.TextField()  # stores "A", "B", "C", "D"
+    user_answer = models.TextField()  # "A"/"B"/"C"/"D"
     is_correct = models.BooleanField(default=False)
     answered_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Answer by {self.user} to {self.question.id}"
+
 
 
 class UserProgress(models.Model):
@@ -69,26 +87,6 @@ class UserProgress(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.correct_answers}/{self.total_questions}"
-
-
-
-
-class TopicMastery(models.Model):
-    """
-    Stores per-user mastery for a topic within a lecture note.
-    Mastery ranges 0.0 (unknown) to 1.0 (mastered).
-    """
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    lecture_note = models.ForeignKey(LectureNote, on_delete=models.CASCADE)
-    topic = models.CharField(max_length=120)
-    mastery = models.FloatField(default=0.3)  # start modest
-    last_updated = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        unique_together = ("user", "lecture_note", "topic")
-
-    def __str__(self):
-        return f"{self.user.username} | {self.topic} = {self.mastery:.2f}"
 
 
 class UserStreak(models.Model):

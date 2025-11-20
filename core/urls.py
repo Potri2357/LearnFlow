@@ -6,6 +6,7 @@ from .views import analytics_for_note, recent_weak_topics, next_actions , ai_ins
 from django.urls import path
 from . import views
 from django.urls import path, include
+from .views import upload_pdf, generate_mcqs
 
 urlpatterns = [
     path("upload-note/", upload_lecture_note),
@@ -28,7 +29,10 @@ urlpatterns = [
     path('weak-topics/', views.weak_topics, name='weak_topics'),
     path('progress/', views.progress, name='progress'),
     path('analytics/<int:note_id>/', views.analytics_for_note, name='analytics'),
-    path('study-plan/<int:note_id>/', views.generate_study_plan, name='study_plan'),  # if you have this
+    path('study-plan/<int:note_id>/', views.generate_study_plan, name='study_plan'),
+    path('note-details/<int:note_id>/', views.get_note_details, name='note_details'),
+    path('upload-pdf/', upload_pdf),
+    # if you have this
     # optional n8n webhook receiver
     # path('webhook/n8n/<str:flow_id>/', views.n8n_webhook, name='n8n_webhook'),
 ]
