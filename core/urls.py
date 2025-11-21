@@ -4,8 +4,8 @@ from .views import (
     upload_lecture_note, generate_questions, submit_answer, weak_topics, progress,
     generate_mcqs, get_quiz_questions, submit_mcq_answer, adaptive_quiz_start, generate_study_plan,
     analytics_for_note, recent_weak_topics, next_actions, ai_insights,
-    upload_pdf, get_note_details, quiz_completed,
-    RegisterView, UserProfileView, NotificationListView, NotificationMarkReadView, 
+    upload_pdf, get_note_details, quiz_completed, user_profile,
+    RegisterView, NotificationListView, NotificationMarkReadView, 
     NotificationMarkAllReadView, NotificationDeleteView, CurrentUserView
 )
 
@@ -42,7 +42,7 @@ urlpatterns = [
     path('auth/me/', CurrentUserView.as_view(), name='current_user'),
     
     # Profile URLs
-    path('profile/', UserProfileView.as_view(), name='user_profile'),
+    path('profile/', user_profile, name='user_profile'),
     
     # Notification URLs
     path('notifications/', NotificationListView.as_view(), name='notifications'),

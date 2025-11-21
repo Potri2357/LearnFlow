@@ -72,6 +72,7 @@ class UserAnswer(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     user_answer = models.TextField()  # "A"/"B"/"C"/"D"
     is_correct = models.BooleanField(default=False)
+    time_taken = models.IntegerField(default=0)  # seconds
     answered_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

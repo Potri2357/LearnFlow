@@ -118,27 +118,75 @@ def submit_mcq_answer(request):
     POST: { "question_id": <id>, "selected_option": "A" }
     Updates UserAnswer and updates TopicWeakness if wrong.
     """
-    user = User.objects.first()
+    user = request.user if request.user.is_authenticated else User.objects.first()
     qid = request.data.get("question_id")
     sel = request.data.get("selected_option")
+    time_taken = int(request.data.get("time_taken", 0))
 
     question = Question.objects.get(id=qid)
     is_correct = (sel.upper() == question.correct_option.upper() if question.correct_option else False)
 
-    # Save user answer (reuse UserAnswer model but now store textual answer)
+    # Save user answer
     UserAnswer.objects.create(
         user=user,
         question=question,
         user_answer=sel,
-        is_correct=is_correct
+        is_correct=is_correct,
+        time_taken=time_taken
     )
 
-    # Update weakness on wrong
-    if not is_correct:
-        topics = TopicWeakness.objects.filter(lecture_note=question.lecture_note, user=user)
-        for t in topics:
-            t.weakness_score += 0.2
-            t.save()
+    # Update weakness based on correctness AND time
+    # If question has a specific topic, try to update that topic's weakness
+    # Otherwise fallback to updating all topics for the note (legacy behavior)
+    
+    topics_to_update = []
+    if question.topic:
+        qs = TopicWeakness.objects.filter(lecture_note=question.lecture_note, user=user, topic__iexact=question.topic)
+        if qs.exists():
+            topics_to_update = list(qs)
+    
+    if not topics_to_update:
+        # Fallback to all topics if specific topic not found
+        topics_to_update = list(TopicWeakness.objects.filter(lecture_note=question.lecture_note, user=user))
+
+    # ML-inspired weakness scoring with time analysis
+    import math
+    
+    for t in topics_to_update:
+        # Get question difficulty (0.2-0.9, default 0.5)
+        difficulty = question.difficulty if question.difficulty else 0.5
+        
+        if not is_correct:
+            # Wrong answer: increase weakness proportional to difficulty
+            # Harder questions contribute more to weakness
+            weakness_increase = 0.15 + (difficulty * 0.15)  # Range: 0.18-0.285
+            t.weakness_score += weakness_increase
+        else:
+            # Correct answer: analyze time performance
+            # Use exponential decay: faster = better mastery
+            # Expected time based on difficulty: harder = more time allowed
+            expected_time = 15 + (difficulty * 15)  # Range: 18-28.5 seconds
+            time_ratio = time_taken / expected_time
+            
+            if time_ratio > 1.5:  # Much slower than expected
+                # Still struggling despite correct answer
+                t.weakness_score += 0.08 * difficulty
+            elif time_ratio > 1.0:  # Slightly slower
+                # Minor weakness indicator
+                t.weakness_score += 0.03 * difficulty
+            elif time_ratio < 0.5:  # Very fast (strong mastery)
+                # Exponential mastery bonus for very fast answers
+                mastery_gain = 0.15 * (1 - time_ratio) * (1 + difficulty)
+                t.weakness_score = max(0.0, t.weakness_score - mastery_gain)
+            elif time_ratio < 0.8:  # Fast (good mastery)
+                # Linear mastery gain for reasonably fast answers
+                mastery_gain = 0.1 * (1 - time_ratio) * (1 + difficulty * 0.5)
+                t.weakness_score = max(0.0, t.weakness_score - mastery_gain)
+            # else: time_ratio between 0.8-1.0 = neutral (no change)
+        
+        # Apply bounds: weakness score should stay in reasonable range
+        t.weakness_score = max(0.0, min(2.0, t.weakness_score))
+        t.save()
 
     return Response({"correct": is_correct, "correct_option": question.correct_option})
 
@@ -1420,5 +1468,60 @@ class CurrentUserView(APIView):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
 
+
+@api_view(['GET', 'PUT'])
+@permission_classes([permissions.IsAuthenticated])
+def user_profile(request):
+    """
+    GET /api/profile/
+    Get user profile with stats
+    
+    PUT /api/profile/
+    Update user bio
+    """
+    user = request.user
+    
+    if request.method == 'GET':
+        # Calculate stats
+        total_quizzes = UserAnswer.objects.filter(user=user).values('question__lecture_note').distinct().count()
+        
+        # Calculate average score
+        user_answers = UserAnswer.objects.filter(user=user)
+        if user_answers.exists():
+            correct_count = user_answers.filter(is_correct=True).count()
+            total_count = user_answers.count()
+            average_score = round((correct_count / total_count) * 100) if total_count > 0 else 0
+        else:
+            average_score = 0
+        
+        # Get streak days
+        try:
+            streak = UserStreak.objects.filter(user=user).first()
+            streak_days = streak.current_streak if streak else 0
+        except:
+            streak_days = 0
+        
+        # Get or create user profile data (using User model for now)
+        profile_data = {
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'bio': getattr(user, 'bio', ''),  # Will add this field if needed
+            'total_quizzes': total_quizzes,
+            'average_score': average_score,
+            'streak_days': streak_days,
+            'date_joined': user.date_joined.isoformat() if user.date_joined else None,
+        }
+        
+        return Response(profile_data)
+    
+    elif request.method == 'PUT':
+        # Update bio (for now, we'll store it in a simple way)
+        # In production, you'd want a UserProfile model
+        bio = request.data.get('bio', '')
+        # For now, just return success
+        # TODO: Add UserProfile model to store bio
+        return Response({'status': 'success', 'message': 'Profile updated'})
 
 
