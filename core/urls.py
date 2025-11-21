@@ -4,7 +4,7 @@ from .views import (
     upload_lecture_note, generate_questions, submit_answer, weak_topics, progress,
     generate_mcqs, get_quiz_questions, submit_mcq_answer, adaptive_quiz_start, generate_study_plan,
     analytics_for_note, recent_weak_topics, next_actions, ai_insights,
-    upload_pdf, get_note_details,
+    upload_pdf, get_note_details, quiz_completed,
     RegisterView, UserProfileView, NotificationListView, NotificationMarkReadView, 
     NotificationMarkAllReadView, NotificationDeleteView, CurrentUserView
 )
@@ -33,6 +33,7 @@ urlpatterns = [
     path('study-plan/<int:note_id>/', generate_study_plan, name='study_plan'),
     path('note-details/<int:note_id>/', get_note_details, name='note_details'),
     path('upload-pdf/', upload_pdf),
+    path('quiz-completed/', quiz_completed, name='quiz_completed'),
     
     # Authentication URLs
     path('auth/register/', RegisterView.as_view(), name='register'),

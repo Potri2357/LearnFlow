@@ -7,10 +7,10 @@ from django.utils import timezone
 from django.db import models
 from django.db.models import Avg, Count, Q
 
-from rest_framework.decorators import api_view, parser_classes
+from rest_framework.decorators import api_view, parser_classes, permission_classes
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, permissions
 
 from .models import (
     LectureNote, Question, UserAnswer, TopicWeakness,
@@ -47,6 +47,20 @@ def get_current_user(request=None):
 def get_user(request=None):
     """Alias for get_current_user for backward compatibility"""
     return get_current_user(request)
+
+
+def clean_option_text(text):
+    """
+    Remove letter prefixes (A), B), C), D)) from option text.
+    This ensures options are stored without prefixes in the database.
+    The frontend will add the prefixes when displaying.
+    """
+    if not text:
+        return ""
+    # Remove patterns like "A) ", "B) ", "C) ", "D) " from the start
+    import re
+    cleaned = re.sub(r'^[A-D]\)\s*', '', str(text).strip(), flags=re.IGNORECASE)
+    return cleaned.strip()
 
 
 def call_gemini_generate(prompt):
@@ -247,10 +261,10 @@ Return ONLY JSON in this format:
             question = Question.objects.create(
                 lecture_note=note,
                 question_text=q["question"],
-                option_a=q["options"][0],
-                option_b=q["options"][1],
-                option_c=q["options"][2],
-                option_d=q["options"][3],
+                option_a=clean_option_text(q["options"][0]),
+                option_b=clean_option_text(q["options"][1]),
+                option_c=clean_option_text(q["options"][2]),
+                option_d=clean_option_text(q["options"][3]),
                 correct_option=q["correct"].strip().upper(),
                 explanation=q.get("explanation", ""),
                 difficulty=float(q.get("difficulty", 0.5)),
@@ -480,6 +494,26 @@ def select_adaptive_questions(note_id, user, n=10):
             used_ids.add(q.id)
             if len(selected) >= n: break
 
+    # FINAL FALLBACK: If we still don't have enough, reuse recent questions (ignoring used_ids check for recent ones)
+    if len(selected) < n:
+        # Get all questions that were skipped because they were in recent_q_ids
+        # We need to check against the CURRENT used_ids (which includes selected ones)
+        # to avoid duplicates in the current selection.
+        remaining_needed = n - len(selected)
+        
+        # Candidates are questions that are NOT in the current selection
+        # (i.e. they are in all_questions but NOT in selected)
+        # We can just iterate all_questions again and pick ones not in selected.
+        
+        # Create a set of currently selected IDs for fast lookup
+        selected_ids_set = {q.id for q in selected}
+        
+        for q in all_questions:
+            if q.id not in selected_ids_set:
+                selected.append(q)
+                selected_ids_set.add(q.id) # Mark as selected
+                if len(selected) >= n: break
+
     # final: cut to n
     return selected[:n]
 
@@ -573,6 +607,43 @@ def submit_mcq_answer(request):
         })
 
     except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def quiz_completed(request):
+    """
+    POST: { "note_id": <id>, "score": <int>, "total": <int> }
+    Triggers notification creation for quiz completion
+    """
+    try:
+        print(f"DEBUG: quiz_completed called. User: {request.user}, Auth: {request.auth}")
+        print(f"DEBUG: Data: {request.data}")
+        
+        user = request.user  # Use request.user directly since we require authentication
+        note_id = request.data.get("note_id")
+        score = int(request.data.get("score", 0))
+        total = int(request.data.get("total", 1))
+        
+        if not note_id:
+            print("DEBUG: note_id missing")
+            return Response({"error": "note_id required"}, status=400)
+        
+        note = get_object_or_404(LectureNote, id=note_id)
+        current_score = (score / total * 100) if total > 0 else 0
+        
+        print(f"DEBUG: Creating notification for {user.username}, Score: {current_score}%")
+        
+        # Import here to avoid circular import
+        from .signals import create_quiz_completion_notification
+        create_quiz_completion_notification(user, note, current_score, total)
+        
+        print("DEBUG: Notification created successfully")
+        return Response({"message": "Notification created", "score": current_score})
+    except Exception as e:
+        print(f"DEBUG: Error in quiz_completed: {e}")
         traceback.print_exc()
         return Response({"error": str(e)}, status=500)
 
@@ -1229,10 +1300,10 @@ Content:
                 lecture_note=note,
                 topic=topic,
                 question_text=item.get("question",""),
-                option_a=options[0],
-                option_b=options[1],
-                option_c=options[2],
-                option_d=options[3],
+                option_a=clean_option_text(options[0]),
+                option_b=clean_option_text(options[1]),
+                option_c=clean_option_text(options[2]),
+                option_d=clean_option_text(options[3]),
                 correct_option=item.get("answer","").strip().upper()[:1],
                 explanation=item.get("explanation",""),
                 difficulty=0.5 if item.get("difficulty") is None else (0.3 if item.get("difficulty")=="easy" else (0.6 if item.get("difficulty")=="medium" else 0.85))
