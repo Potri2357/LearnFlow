@@ -14,7 +14,7 @@ from rest_framework import status
 
 from .models import (
     LectureNote, Question, UserAnswer, TopicWeakness,
-    TopicMastery, UserStreak, StudyPlan, UserProgress
+    TopicMastery, UserStreak, StudyPlan, UserProgress, Notification
 )
 from .serializers import LectureNoteSerializer, QuestionSerializer, UserAnswerSerializer
 from .ml_utils import extract_topics
@@ -652,7 +652,8 @@ def parse_numbered_sections(text):
 @api_view(['POST'])
 def generate_study_plan(request):
     """
-    Build study plan using current mastery + weak topics and call Gemini (same client).
+    Build study plan using current mastery + weak topics and call Gemini.
+    Tries 'gemini-2.0-flash-exp' first, falls back to 'gemini-1.5-flash'.
     """
     try:
         note_id = request.data.get("note_id")
@@ -734,8 +735,23 @@ Rules:
 - Be concise and actionable
 """
 
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
-        result = model.generate_content(prompt)
+        def generate_with_model(model_name):
+            print(f"Attempting study plan generation with {model_name}...")
+            model = genai.GenerativeModel(model_name)
+            result = model.generate_content(prompt)
+            return result
+
+        # Try primary model (fast/lite), then fallback (latest stable)
+        try:
+            result = generate_with_model('gemini-2.0-flash-lite')
+        except Exception as e:
+            print(f"Primary model (gemini-2.0-flash-lite) failed: {e}")
+            print("Falling back to gemini-flash-latest...")
+            try:
+                result = generate_with_model('gemini-flash-latest')
+            except Exception as e2:
+                print(f"Fallback model also failed: {e2}")
+                raise e2
 
         # get text robustly
         try:
@@ -801,26 +817,6 @@ def analytics_for_note(request, note_id):
             "mastery": round(t.mastery, 3),
             "last_updated": t.last_updated,
         })
-
-    return Response({
-        "topic_mastery": topic_mastery
-    })
-
-@api_view(['GET'])
-def get_note_details(request, note_id):
-    """
-    Returns details about a lecture note, including the total number of available questions.
-    """
-    try:
-        note = LectureNote.objects.get(id=note_id)
-        question_count = Question.objects.filter(lecture_note=note).count()
-        return Response({
-            "id": note.id,
-            "title": note.title,
-            "question_count": question_count
-        })
-    except LectureNote.DoesNotExist:
-        return Response({"error": "Note not found"}, status=404)
 
     # Weighted mastery score
     mastery_score = 0.0
@@ -898,10 +894,13 @@ def get_note_details(request, note_id):
         acc = (correct * 100 / total) if total else None
 
         trend.append({
-            "date": day.isoformat(),
-            "accuracy": round(acc, 2) if acc is not None else None,
-            "total": total,
+            "date": day.strftime("%m-%d"),
+            "accuracy": round(acc, 1) if acc is not None else 0
         })
+
+
+
+
 
     # -------------------------------------------------------
     # 5) RECENT SESSIONS
@@ -937,6 +936,23 @@ def get_note_details(request, note_id):
         "accuracy_trend_last7": trend,
         "recent_sessions": recent_sessions,
     })
+
+
+@api_view(['GET'])
+def get_note_details(request, note_id):
+    """
+    Returns details about a lecture note, including the total number of available questions.
+    """
+    try:
+        note = LectureNote.objects.get(id=note_id)
+        question_count = Question.objects.filter(lecture_note=note).count()
+        return Response({
+            "id": note.id,
+            "title": note.title,
+            "question_count": question_count
+        })
+    except LectureNote.DoesNotExist:
+        return Response({"error": "Note not found"}, status=404)
 
 
 
@@ -1290,6 +1306,34 @@ class NotificationMarkReadView(APIView):
             notification.is_read = True
             notification.save()
             return Response({'status': 'notification marked as read'})
+        except Notification.DoesNotExist:
+            return Response({'error': 'Notification not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class NotificationMarkAllReadView(APIView):
+    """
+    POST /api/notifications/mark-all-read/
+    Mark all notifications as read for the user
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        return Response({'status': 'all notifications marked as read'})
+
+
+class NotificationDeleteView(APIView):
+    """
+    DELETE /api/notifications/<id>/delete/
+    Delete a notification
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, pk):
+        try:
+            notification = Notification.objects.get(pk=pk, user=request.user)
+            notification.delete()
+            return Response({'status': 'notification deleted'})
         except Notification.DoesNotExist:
             return Response({'error': 'Notification not found'}, status=status.HTTP_404_NOT_FOUND)
 

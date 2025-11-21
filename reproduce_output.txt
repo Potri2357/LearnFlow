@@ -1,0 +1,6 @@
+Testing with note ID: 2
+Attempting study plan generation with gemini-2.0-flash-lite...
+Status Code: 200
+Success!
+Plan length: 3758
+Sections: dict_keys(['strengths', 'weak', 'resources', 'practice', 'revision', 'assessment'])
