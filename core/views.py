@@ -14,7 +14,7 @@ from rest_framework import status, permissions
 
 from .models import (
     LectureNote, Question, UserAnswer, TopicWeakness,
-    TopicMastery, UserStreak, StudyPlan, UserProgress, Notification
+    TopicMastery, UserStreak, StudyPlan, UserProgress, Notification, QuizAttempt
 )
 from .serializers import LectureNoteSerializer, QuestionSerializer, UserAnswerSerializer
 from .ml_utils import extract_topics
@@ -193,14 +193,24 @@ def submit_mcq_answer(request):
 
 # API 1: Upload Lecture Note
 @api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
 def upload_lecture_note(request):
-    user = User.objects.first()
+    user = request.user
 
     title = request.data.get("title")
     content = request.data.get("content")
 
-    # ❗ Remove user=user
+    # Check for duplicate content
+    existing_note = LectureNote.objects.filter(user=user, content=content).first()
+    if existing_note:
+        return Response({
+            "message": "Note already exists.",
+            "note_id": existing_note.id,
+            "topics": []
+        }, status=200)
+
     note = LectureNote.objects.create(
+        user=user,
         title=title,
         content=content
     )
@@ -667,9 +677,6 @@ def quiz_completed(request):
     Triggers notification creation for quiz completion
     """
     try:
-        print(f"DEBUG: quiz_completed called. User: {request.user}, Auth: {request.auth}")
-        print(f"DEBUG: Data: {request.data}")
-        
         user = request.user  # Use request.user directly since we require authentication
         note_id = request.data.get("note_id")
         score = int(request.data.get("score", 0))
@@ -684,14 +691,23 @@ def quiz_completed(request):
         
         print(f"DEBUG: Creating notification for {user.username}, Score: {current_score}%")
         
+        # Save QuizAttempt
+        from .models import QuizAttempt
+        QuizAttempt.objects.create(
+            user=user,
+            lecture_note=note,
+            score=score,
+            total_questions=total
+        )
+        
         # Import here to avoid circular import
         from .signals import create_quiz_completion_notification
         create_quiz_completion_notification(user, note, current_score, total)
         
-        print("DEBUG: Notification created successfully")
+
+        
         return Response({"message": "Notification created", "score": current_score})
     except Exception as e:
-        print(f"DEBUG: Error in quiz_completed: {e}")
         traceback.print_exc()
         return Response({"error": str(e)}, status=500)
 
@@ -916,13 +932,14 @@ Rules:
 
 
 @api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
 def analytics_for_note(request, note_id):
-    user = get_current_user()
+    user = request.user
 
     try:
-        note = LectureNote.objects.get(id=note_id)
+        note = LectureNote.objects.get(id=note_id, user=user)
     except LectureNote.DoesNotExist:
-        return Response({"error": "invalid note_id"}, status=400)
+        return Response({"error": "invalid note_id or permission denied"}, status=404)
 
     # -------------------------------------------------------
     # 1) TOPIC MASTERY (improved)
@@ -1219,18 +1236,30 @@ Rules:
 
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
+@permission_classes([permissions.IsAuthenticated])
 def upload_pdf(request):
     """
     Upload PDF, extract text, save LectureNote, seed topics in TopicWeakness and TopicMastery
     """
     try:
-        user = get_user()
+        user = request.user
         title = request.data.get("title", request.FILES.get("file").name if request.FILES.get("file") else "Untitled")
         file_obj = request.FILES.get("file")
         if not file_obj:
             return Response({"error": "No PDF uploaded"}, status=400)
 
         extracted_text = extract_text_from_pdf(file_obj)
+
+        # Check for duplicate content
+        existing_note = LectureNote.objects.filter(user=user, content=extracted_text).first()
+        if existing_note:
+             serializer = LectureNoteSerializer(existing_note)
+             return Response({
+                 "note_id": existing_note.id, 
+                 "topics": [], 
+                 "message": "Note with same content already exists.", 
+                 "note": serializer.data
+             }, status=200)
 
         note = LectureNote.objects.create(
             user=user,
@@ -1482,32 +1511,62 @@ def user_profile(request):
     user = request.user
     
     if request.method == 'GET':
-        # Calculate stats
-        total_quizzes = UserAnswer.objects.filter(user=user).values('question__lecture_note').distinct().count()
+        # Calculate stats using QuizAttempt
+        attempts = QuizAttempt.objects.filter(user=user)
+        total_quizzes = attempts.count()
         
         # Calculate average score
-        user_answers = UserAnswer.objects.filter(user=user)
-        if user_answers.exists():
-            correct_count = user_answers.filter(is_correct=True).count()
-            total_count = user_answers.count()
-            average_score = round((correct_count / total_count) * 100) if total_count > 0 else 0
+        if total_quizzes > 0:
+            total_percentage = 0
+            for attempt in attempts:
+                if attempt.total_questions > 0:
+                    total_percentage += (attempt.score / attempt.total_questions) * 100
+            average_score = round(total_percentage / total_quizzes)
         else:
             average_score = 0
+            
+        # Calculate streak
+        streak_days = 0
+        if total_quizzes > 0:
+            # Get distinct dates of activity
+            dates = attempts.dates('completed_at', 'day', order='DESC')
+            
+            if dates:
+                today = timezone.now().date()
+                
+                # Check if the most recent activity was today or yesterday
+                last_active = dates[0]
+                
+                if last_active == today:
+                    streak_days = 1
+                    expected_date = today - datetime.timedelta(days=1)
+                elif last_active == today - datetime.timedelta(days=1):
+                    streak_days = 1
+                    expected_date = today - datetime.timedelta(days=2)
+                else:
+                    streak_days = 0
+                    expected_date = None
+                
+                if streak_days > 0:
+                    # Iterate through the rest of the dates
+                    for d in dates:
+                        if d == last_active:
+                            continue
+                        
+                        if d == expected_date:
+                            streak_days += 1
+                            expected_date -= datetime.timedelta(days=1)
+                        else:
+                            # Gap found
+                            break
         
-        # Get streak days
-        try:
-            streak = UserStreak.objects.filter(user=user).first()
-            streak_days = streak.current_streak if streak else 0
-        except:
-            streak_days = 0
-        
-        # Get or create user profile data (using User model for now)
+        # Get or create user profile data
         profile_data = {
             'username': user.username,
             'email': user.email,
             'first_name': user.first_name,
             'last_name': user.last_name,
-            'bio': getattr(user, 'bio', ''),  # Will add this field if needed
+            'bio': getattr(user, 'bio', ''),
             'total_quizzes': total_quizzes,
             'average_score': average_score,
             'streak_days': streak_days,
@@ -1517,11 +1576,149 @@ def user_profile(request):
         return Response(profile_data)
     
     elif request.method == 'PUT':
-        # Update bio (for now, we'll store it in a simple way)
-        # In production, you'd want a UserProfile model
+        # Update bio
         bio = request.data.get('bio', '')
-        # For now, just return success
-        # TODO: Add UserProfile model to store bio
+        # In a real app, save this to a UserProfile model
+        # For now, we'll just acknowledge it
         return Response({'status': 'success', 'message': 'Profile updated'})
 
 
+
+class LectureNoteListView(generics.ListAPIView):
+    """
+    GET /api/lectures/
+    List all lecture notes
+    """
+    serializer_class = LectureNoteSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Return notes for the current user only
+        return LectureNote.objects.filter(user=self.request.user).order_by('-created_at')
+
+
+class LectureNoteDetailView(generics.RetrieveDestroyAPIView):
+    """
+    GET /api/lectures/<id>/
+    Get details of a lecture note (including questions)
+    
+    DELETE /api/lectures/<id>/
+    Delete a lecture note
+    """
+    serializer_class = LectureNoteSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = LectureNote.objects.all()
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        data = serializer.data
+        
+        # Add questions to the response
+        questions = Question.objects.filter(lecture_note=instance)
+        question_serializer = QuestionSerializer(questions, many=True)
+        data['questions'] = question_serializer.data
+        
+        return Response(data)
+
+
+@api_view(['PUT'])
+@permission_classes([permissions.IsAuthenticated])
+def update_question(request, question_id):
+    """
+    Update an existing question
+    PUT /api/questions/<id>/update/
+    Body: {
+        "question_text": "...",
+        "option_a": "...",
+        "option_b": "...",
+        "option_c": "...",
+        "option_d": "...",
+        "correct_option": "A/B/C/D",
+        "explanation": "..."
+    }
+    """
+    try:
+        question = get_object_or_404(Question, id=question_id)
+        
+        # Update fields if provided
+        if 'question_text' in request.data:
+            question.question_text = request.data['question_text']
+        
+        if 'option_a' in request.data:
+            question.option_a = request.data['option_a']
+        if 'option_b' in request.data:
+            question.option_b = request.data['option_b']
+        if 'option_c' in request.data:
+            question.option_c = request.data['option_c']
+        if 'option_d' in request.data:
+            question.option_d = request.data['option_d']
+            
+        if 'correct_option' in request.data:
+            correct = request.data['correct_option'].strip().upper()
+            if correct not in ['A', 'B', 'C', 'D']:
+                return Response(
+                    {"error": "correct_option must be A, B, C, or D"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            question.correct_option = correct
+            
+        if 'explanation' in request.data:
+            question.explanation = request.data['explanation']
+        
+        question.save()
+        
+        return Response({
+            "message": "Question updated successfully",
+            "question": QuestionSerializer(question).data
+        })
+        
+    except Exception as e:
+        traceback.print_exc()
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def generate_flashcards(request):
+    """
+    POST /api/flashcards/generate/
+    { "note_id": 123, "count": 5 }
+    Generates flashcards using Gemini.
+    """
+    note_id = request.data.get("note_id")
+    count = int(request.data.get("count", 5))
+    
+    note = get_object_or_404(LectureNote, id=note_id)
+    
+    prompt = f"""
+    Generate exactly {count} flashcards from the following text.
+    Each flashcard should have a 'front' (concept/question) and 'back' (definition/answer).
+    Keep them concise.
+    
+    Text:
+    {note.content[:3000]}
+    
+    Return ONLY JSON:
+    [
+      {{ "front": "Concept", "back": "Definition" }}
+    ]
+    """
+    
+    try:
+        response = call_gemini_generate(prompt)
+        text = response["candidates"][0]["content"]["parts"][0]["text"]
+        
+        # Clean JSON
+        text = text.replace("```json", "").replace("```", "").strip()
+        flashcards = json.loads(text)
+        
+        return Response({"flashcards": flashcards})
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)

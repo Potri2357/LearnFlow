@@ -6,8 +6,11 @@ from .views import (
     analytics_for_note, recent_weak_topics, next_actions, ai_insights,
     upload_pdf, get_note_details, quiz_completed, user_profile,
     RegisterView, NotificationListView, NotificationMarkReadView, 
-    NotificationMarkAllReadView, NotificationDeleteView, CurrentUserView
+    NotificationMarkAllReadView, NotificationDeleteView, CurrentUserView,
+    LectureNoteListView, LectureNoteDetailView,
+    generate_flashcards, update_question
 )
+
 
 urlpatterns = [
     path("upload-note/", upload_lecture_note),
@@ -49,4 +52,14 @@ urlpatterns = [
     path('notifications/<int:pk>/mark-read/', NotificationMarkReadView.as_view(), name='notification_mark_read'),
     path('notifications/mark-all-read/', NotificationMarkAllReadView.as_view(), name='notification_mark_all_read'),
     path('notifications/<int:pk>/delete/', NotificationDeleteView.as_view(), name='notification_delete'),
+    
+    # Lecture URLs
+    path('lectures/', LectureNoteListView.as_view(), name='lecture_list'),
+    path('lectures/<int:pk>/', LectureNoteDetailView.as_view(), name='lecture_detail'),
+    
+    # Question Management
+    path('questions/<int:question_id>/update/', update_question, name='update_question'),
+
+    # Flashcards
+    path('flashcards/generate/', generate_flashcards, name='generate_flashcards'),
 ]

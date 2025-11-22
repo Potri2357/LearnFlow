@@ -134,3 +134,26 @@ class Notification(models.Model):
     def __str__(self):
         return f"Notification for {self.user.username}: {self.message[:20]}"
 
+
+class QuizAttempt(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='quiz_attempts')
+    lecture_note = models.ForeignKey(LectureNote, on_delete=models.CASCADE)
+    score = models.IntegerField()
+    total_questions = models.IntegerField()
+    completed_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.lecture_note.title} - {self.score}/{self.total_questions}"
+
+
+class Badge(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='badges')
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    icon = models.CharField(max_length=50, default="🏆")  # Emoji or icon name
+    earned_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.name}"
+
+
