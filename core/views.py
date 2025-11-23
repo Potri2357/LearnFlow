@@ -1722,3 +1722,119 @@ def generate_flashcards(request):
         return Response({"flashcards": flashcards})
     except Exception as e:
         return Response({"error": str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def summarize_lecture(request, note_id):
+    """
+    Generate AI-powered summary of a lecture with flowchart visualization.
+    Uses Gemini to create structured summary with key concepts, definitions, and Mermaid flowchart.
+    """
+    try:
+        user = request.user
+        note = get_object_or_404(LectureNote, id=note_id, user=user)
+        
+        # Build prompt for structured summary with flowchart
+        prompt = f"""
+You are an expert educational AI. Analyze the following lecture content and create a comprehensive, structured summary.
+
+Lecture Title: {note.title}
+
+Lecture Content:
+\"\"\"
+{note.content}
+\"\"\"
+
+Generate a JSON response with the following structure:
+
+{{
+  "overview": "A 2-3 sentence overview of the entire lecture",
+  "key_concepts": [
+    {{
+      "name": "Concept Name",
+      "description": "Brief explanation (1-2 sentences)",
+      "importance": "high|medium|low"
+    }}
+  ],
+  "definitions": [
+    {{
+      "term": "Important Term",
+      "definition": "Clear definition"
+    }}
+  ],
+  "relationships": "A paragraph explaining how the key concepts relate to each other",
+  "flowchart": "Mermaid.js flowchart syntax showing the flow of concepts (use graph TD format)"
+}}
+
+Requirements:
+- Include 4-8 key concepts
+- Include 3-6 important definitions
+- Create a clear, logical flowchart that shows the progression and relationships of concepts
+- Use proper Mermaid.js syntax for the flowchart (graph TD or graph LR)
+- Make the flowchart visually clear with proper node labels
+- Return ONLY valid JSON, no markdown code blocks
+"""
+
+        def generate_with_model(model_name):
+            print(f"Attempting lecture summary with {model_name}...")
+            model = genai.GenerativeModel(model_name)
+            result = model.generate_content(prompt)
+            return result
+
+        # Try primary model (fast/lite), then fallback (latest stable)
+        try:
+            result = generate_with_model('gemini-2.0-flash-lite')
+        except Exception as e:
+            print(f"Primary model (gemini-2.0-flash-lite) failed: {e}")
+            print("Falling back to gemini-flash-latest...")
+            try:
+                result = generate_with_model('gemini-flash-latest')
+            except Exception as e2:
+                print(f"Fallback model also failed: {e2}")
+                traceback.print_exc()
+                return Response({
+                    "error": "Failed to generate summary with available models",
+                    "details": str(e2),
+                    "primary_error": str(e)
+                }, status=500)
+
+        # Extract text robustly (handle different response formats)
+        try:
+            raw_text = result.text.strip()
+        except Exception:
+            try:
+                raw_text = result.candidates[0].content.parts[0].text.strip()
+            except:
+                raw_text = str(result)
+        
+        # Clean up markdown code blocks if present
+        cleaned = raw_text.replace("```json", "").replace("```", "").strip()
+        
+        try:
+            summary_data = json.loads(cleaned)
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing error: {e}")
+            print(f"Raw response: {raw_text[:500]}")
+            return Response({
+                "error": "Failed to parse AI response",
+                "raw_response": raw_text[:500]
+            }, status=500)
+
+        # Validate required fields
+        required_fields = ['overview', 'key_concepts', 'definitions', 'relationships', 'flowchart']
+        for field in required_fields:
+            if field not in summary_data:
+                summary_data[field] = [] if field in ['key_concepts', 'definitions'] else ""
+
+        return Response({
+            "note_id": note.id,
+            "note_title": note.title,
+            "summary": summary_data
+        }, status=200)
+
+    except Exception as e:
+        traceback.print_exc()
+        return Response({
+            "error": str(e)
+        }, status=500)

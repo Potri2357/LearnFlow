@@ -8,7 +8,7 @@ from .views import (
     RegisterView, NotificationListView, NotificationMarkReadView, 
     NotificationMarkAllReadView, NotificationDeleteView, CurrentUserView,
     LectureNoteListView, LectureNoteDetailView,
-    generate_flashcards, update_question
+    generate_flashcards, update_question, summarize_lecture
 )
 
 
@@ -62,4 +62,7 @@ urlpatterns = [
 
     # Flashcards
     path('flashcards/generate/', generate_flashcards, name='generate_flashcards'),
+    
+    # Lecture Summarization
+    path('lectures/<int:note_id>/summarize/', summarize_lecture, name='summarize_lecture'),
 ]
