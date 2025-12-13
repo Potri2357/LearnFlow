@@ -157,3 +157,62 @@ class Badge(models.Model):
         return f"{self.user.username} - {self.name}"
 
 
+# Exam Preparation Models
+class ExamSyllabus(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='exam_syllabi')
+    title = models.CharField(max_length=255)
+    content = models.TextField()  # Extracted text from PDF or direct input
+    file = models.FileField(upload_to='syllabi/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = "Exam Syllabi"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} - {self.user.username}"
+
+
+class PreviousQuestionPaper(models.Model):
+    exam_syllabus = models.ForeignKey(ExamSyllabus, on_delete=models.CASCADE, related_name='previous_papers')
+    file = models.FileField(upload_to='previous_papers/')
+    content = models.TextField()  # Extracted text from PDF
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-uploaded_at']
+
+    def __str__(self):
+        return f"Paper for {self.exam_syllabus.title}"
+
+
+class ExamQuestion(models.Model):
+    exam_syllabus = models.ForeignKey(ExamSyllabus, on_delete=models.CASCADE, related_name='exam_questions')
+    question_text = models.TextField()
+    answer = models.TextField()
+    marks = models.IntegerField()
+    priority = models.IntegerField()  # 1 = highest priority
+    topic = models.CharField(max_length=255, blank=True)
+    is_from_pattern = models.BooleanField(default=False)  # Based on previous papers analysis
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['priority', '-marks']
+
+    def __str__(self):
+        return f"Q{self.priority} ({self.marks}m) - {self.question_text[:50]}"
+
+
+class ExamConfiguration(models.Model):
+    exam_syllabus = models.ForeignKey(ExamSyllabus, on_delete=models.CASCADE, related_name='configurations')
+    total_marks = models.IntegerField()
+    num_questions = models.IntegerField()
+    mark_distribution = models.JSONField()  # {"2": 5, "5": 3, "10": 2} - marks: count
+    secure_centum_mode = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Config for {self.exam_syllabus.title} - {self.total_marks}m"
+

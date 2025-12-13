@@ -28,9 +28,17 @@ import datetime
 import json
 import re
 import traceback
+import time
 from datetime import timezone as dt_timezone
 
 import google.generativeai as genai
+
+# Import exam preparation views
+from .exam_views import (
+    upload_exam_syllabus, upload_previous_papers, generate_exam_questions,
+    get_exam_questions, update_exam_question, delete_exam_question, list_exam_syllabi,
+    generate_exam_strategy
+)
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 GEMINI_API_URL = os.environ.get("GEMINI_API_URL")
@@ -67,7 +75,7 @@ def call_gemini_generate(prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
 
     headers = {
-        "Content-Type": "application/jso"
+        "Content-Type": "application/json"
     }
 
     payload = {
@@ -82,8 +90,24 @@ def call_gemini_generate(prompt):
         ]
     }
 
-    response = requests.post(url, json=payload, headers=headers, timeout=60)
-    response.raise_for_status()
+    # Retry logic for 429 errors
+    max_retries = 3
+    base_delay = 2
+
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(url, json=payload, headers=headers, timeout=60)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 429 and attempt < max_retries - 1:
+                sleep_time = base_delay * (2 ** attempt)
+                print(f"Gemini API 429 Rate Limit. Retrying in {sleep_time}s... (Attempt {attempt + 1}/{max_retries})")
+                time.sleep(sleep_time)
+                continue
+            raise
+    
+    # Should not be reached if raise_for_status works, but safe fallback
     return response.json()
 
 
@@ -280,11 +304,28 @@ Return ONLY JSON in this format:
 
     # ==== 3. Send to Gemini ====
     try:
-        response = requests.post(
-            GEMINI_API_URL + f"?key={GEMINI_API_KEY}",
-            headers={"Content-Type": "application/json"},
-            json=payload
-        )
+        # Retry logic for 429 errors
+        max_retries = 3
+        base_delay = 2
+        
+        response = None
+        for attempt in range(max_retries):
+            try:
+                response = requests.post(
+                    GEMINI_API_URL + f"?key={GEMINI_API_KEY}",
+                    headers={"Content-Type": "application/json"},
+                    json=payload,
+                    timeout=60
+                )
+                response.raise_for_status()
+                break # Success
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 429 and attempt < max_retries - 1:
+                    sleep_time = base_delay * (2 ** attempt)
+                    print(f"Gemini API 429 Rate Limit in generate_questions. Retrying in {sleep_time}s... (Attempt {attempt + 1}/{max_retries})")
+                    time.sleep(sleep_time)
+                    continue
+                raise
 
         raw = response.json()
         print("RAW GEMINI QUESTION OUTPUT:", raw)
@@ -332,6 +373,13 @@ Return ONLY JSON in this format:
         except Exception as e:
             print("ERROR saving question:", e)
             continue  # skip bad entries
+
+    # Create notification for question generation
+    if saved_questions and note.user:
+        Notification.objects.create(
+            user=note.user,
+            message=f"✅ {len(saved_questions)} questions generated successfully for '{note.title}'! Ready to practice."
+        )
 
     return JsonResponse({
         "generated_count": len(saved_questions),
@@ -723,7 +771,6 @@ def parse_numbered_sections(text):
          Explanations:
       4. Practice Plan:
       5. Revision Plan:
-      6. Next Assessment:
     Return dict of named sections (strings)
     """
     # normalize newlines
@@ -736,7 +783,6 @@ def parse_numbered_sections(text):
         ("resources", ["recommended learning resources", "recommended resources", "resources"]),
         ("practice", ["practice plan", "practice", "practice plan:"]),
         ("revision", ["revision plan", "revision"]),
-        ("assessment", ["next assessment", "next assessment:", "assessment"]),
     ]
 
     # Prepare mapping
@@ -860,10 +906,6 @@ Hard:
 - <item1>
 - <item2>
 
-6. Next Assessment:
-- <recommendation1>
-- <recommendation2>
-
 Rules:
 - No markdown, no code block, no JSON
 - Provide at least 2 items per list
@@ -876,14 +918,14 @@ Rules:
             result = model.generate_content(prompt)
             return result
 
-        # Try primary model (fast/lite), then fallback (latest stable)
+        # Try primary model (verified available)
         try:
-            result = generate_with_model('gemini-2.0-flash-lite')
+            result = generate_with_model('gemini-2.0-flash')
         except Exception as e:
-            print(f"Primary model (gemini-2.0-flash-lite) failed: {e}")
-            print("Falling back to gemini-flash-latest...")
+            print(f"Primary model (gemini-1.5-flash) failed: {e}")
+            print("Falling back to gemini-pro...")
             try:
-                result = generate_with_model('gemini-flash-latest')
+                result = generate_with_model('gemini-pro')
             except Exception as e2:
                 print(f"Fallback model also failed: {e2}")
                 raise e2
@@ -937,15 +979,34 @@ def analytics_for_note(request, note_id):
     user = request.user
 
     try:
+        # Try to get note for this user
         note = LectureNote.objects.get(id=note_id, user=user)
     except LectureNote.DoesNotExist:
-        return Response({"error": "invalid note_id or permission denied"}, status=404)
+        # Fallback: check if note exists but has no user (legacy data)
+        try:
+            note = LectureNote.objects.get(id=note_id, user__isnull=True)
+            # Assign the note to current user
+            note.user = user
+            note.save()
+        except LectureNote.DoesNotExist:
+            return Response({"error": "invalid note_id or permission denied"}, status=404)
 
     # -------------------------------------------------------
-    # 1) TOPIC MASTERY (improved)
+    # 1) MASTERY SCORE - Based on actual quiz performance
     # -------------------------------------------------------
+    # Get all answers for this note
+    all_answers = UserAnswer.objects.filter(user=user, question__lecture_note=note)
+    total_answers = all_answers.count()
+    correct_answers = all_answers.filter(is_correct=True).count()
+    
+    # Calculate mastery score from actual performance
+    if total_answers > 0:
+        mastery_score = (correct_answers / total_answers) * 100
+    else:
+        mastery_score = 0.0
+    
+    # Topic Mastery (for display)
     tm_qs = TopicMastery.objects.filter(user=user, lecture_note=note)
-
     topic_mastery = []
     for t in tm_qs:
         topic_mastery.append({
@@ -953,14 +1014,6 @@ def analytics_for_note(request, note_id):
             "mastery": round(t.mastery, 3),
             "last_updated": t.last_updated,
         })
-
-    # Weighted mastery score
-    mastery_score = 0.0
-    if topic_mastery:
-        mastery_score = (
-            sum([t["mastery"] * 1.2 for t in topic_mastery]) /
-            len(topic_mastery)
-        ) * 100
 
     # -------------------------------------------------------
     # 2) WEAK TOPICS (improved accuracy)
@@ -1208,31 +1261,20 @@ Rules:
     # -----------------------------
     # Call Gemini API
     # -----------------------------
-    url = (
-        "https://generativelanguage.googleapis.com/v1/models/"
-        "gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY
-    )
-
-    payload = {
-        "contents": [
-            {"parts": [{"text": prompt}]}
-        ]
-    }
-
     try:
-        response = requests.post(url, json=payload)
-        print("RAW GEMINI OUTPUT:", response.text)
+        data = call_gemini_generate(prompt)
 
-        data = response.json()
-
-        ai_text = data["candidates"][0]["content"]["parts"][0]["text"]
-        ai_text = ai_text.replace("**", "").strip()
+        try:
+            ai_text = data["candidates"][0]["content"]["parts"][0]["text"]
+            ai_text = ai_text.replace("**", "").strip()
+        except:
+             ai_text = str(data)
 
         return Response({"insights": ai_text})
 
     except Exception as e:
         print("GEMINI ERROR:", e)
-        return Response({"insights": ""})
+        return Response({"insights": "Analysis unavailable due to service load."})
 
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
@@ -1772,6 +1814,9 @@ Requirements:
 - Include 3-6 important definitions
 - Create a clear, logical flowchart that shows the progression and relationships of concepts
 - Use proper Mermaid.js syntax for the flowchart (graph TD or graph LR)
+- CRITICAL: Enclose ALL node labels in double quotes, e.g., A["Node Label"]
+- Do NOT use special characters (like :, -, (, )) in node labels unless they are inside quotes
+- Do NOT use semicolons at the end of lines
 - Make the flowchart visually clear with proper node labels
 - Return ONLY valid JSON, no markdown code blocks
 """
@@ -1782,14 +1827,14 @@ Requirements:
             result = model.generate_content(prompt)
             return result
 
-        # Try primary model (fast/lite), then fallback (latest stable)
+        # Try primary model (verified available)
         try:
-            result = generate_with_model('gemini-2.0-flash-lite')
+            result = generate_with_model('gemini-2.0-flash')
         except Exception as e:
-            print(f"Primary model (gemini-2.0-flash-lite) failed: {e}")
-            print("Falling back to gemini-flash-latest...")
+            print(f"Primary model (gemini-1.5-flash) failed: {e}")
+            print("Falling back to gemini-pro...")
             try:
-                result = generate_with_model('gemini-flash-latest')
+                result = generate_with_model('gemini-pro')
             except Exception as e2:
                 print(f"Fallback model also failed: {e2}")
                 traceback.print_exc()

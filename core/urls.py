@@ -1,5 +1,5 @@
 from django.urls import path
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     upload_lecture_note, generate_questions, submit_answer, weak_topics, progress,
     generate_mcqs, get_quiz_questions, submit_mcq_answer, adaptive_quiz_start, generate_study_plan,
@@ -8,8 +8,13 @@ from .views import (
     RegisterView, NotificationListView, NotificationMarkReadView, 
     NotificationMarkAllReadView, NotificationDeleteView, CurrentUserView,
     LectureNoteListView, LectureNoteDetailView,
-    generate_flashcards, update_question, summarize_lecture
+    generate_flashcards, update_question, summarize_lecture,
+    # Exam preparation views
+    upload_exam_syllabus, upload_previous_papers, generate_exam_questions,
+    get_exam_questions, update_exam_question, delete_exam_question, list_exam_syllabi,
+    generate_exam_strategy
 )
+from .auth_views import CustomTokenObtainPairView
 
 
 urlpatterns = [
@@ -40,7 +45,7 @@ urlpatterns = [
     
     # Authentication URLs
     path('auth/register/', RegisterView.as_view(), name='register'),
-    path('auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/me/', CurrentUserView.as_view(), name='current_user'),
     
@@ -65,4 +70,14 @@ urlpatterns = [
     
     # Lecture Summarization
     path('lectures/<int:note_id>/summarize/', summarize_lecture, name='summarize_lecture'),
+    
+    # Exam Preparation
+    path('exam/syllabi/', list_exam_syllabi, name='list_exam_syllabi'),
+    path('exam/syllabus/upload/', upload_exam_syllabus, name='upload_exam_syllabus'),
+    path('exam/syllabus/<int:syllabus_id>/papers/', upload_previous_papers, name='upload_previous_papers'),
+    path('exam/syllabus/<int:syllabus_id>/generate/', generate_exam_questions, name='generate_exam_questions'),
+    path('exam/syllabus/<int:syllabus_id>/questions/', get_exam_questions, name='get_exam_questions'),
+    path('exam/syllabus/<int:syllabus_id>/strategy/', generate_exam_strategy, name='generate_exam_strategy'),
+    path('exam/question/<int:question_id>/update/', update_exam_question, name='update_exam_question'),
+    path('exam/question/<int:question_id>/delete/', delete_exam_question, name='delete_exam_question'),
 ]

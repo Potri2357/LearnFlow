@@ -1,10 +1,9 @@
-# core/admin.py
-
 from django.contrib import admin
-from .models import LectureNote, Question, TopicWeakness, UserAnswer, UserProgress
-from .models import TopicMastery, UserStreak, UserProfile, Notification
-from .models import StudyPlan
-
+from .models import (
+    LectureNote, Question, TopicWeakness, UserAnswer, UserProgress,
+    TopicMastery, UserStreak, UserProfile, Notification, StudyPlan,
+    QuizAttempt, Badge, ExamSyllabus, PreviousQuestionPaper, ExamQuestion, ExamConfiguration
+)
 
 
 @admin.register(LectureNote)
@@ -61,5 +60,13 @@ class NotificationAdmin(admin.ModelAdmin):
 admin.site.register(TopicMastery)
 admin.site.register(UserStreak)
 admin.site.register(StudyPlan)
+admin.site.register(QuizAttempt)
+admin.site.register(Badge)
+
+# Exam Preparation
+admin.site.register(ExamSyllabus)
+admin.site.register(PreviousQuestionPaper)
+admin.site.register(ExamQuestion)
+admin.site.register(ExamConfiguration)
 
 
