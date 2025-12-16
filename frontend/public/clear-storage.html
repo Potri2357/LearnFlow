@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Dashboard Storage</title>
+</head>
+<body>
+    <h1>Clearing Dashboard Storage...</h1>
+    <script>
+        // Clear all dashboard-related localStorage
+        localStorage.removeItem('dashboardNeedsRefresh');
+        localStorage.removeItem('lastQuizNoteId');
+        localStorage.removeItem('lastSelectedNoteId');
+        
+        // Clear any corrupted data
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            const value = localStorage.getItem(key);
+            if (value === '[object Object]') {
+                console.log('Removing corrupted key:', key);
+                localStorage.removeItem(key);
+            }
+        }
+        
+        alert('Storage cleared! You can close this page and refresh the dashboard.');
+    </script>
+</body>
+</html>
