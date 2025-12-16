@@ -65,8 +65,22 @@
 - Bulk notification management
 
 ### 10. **Badge System**
-- Earn badges for achievements and milestones
-- Gamification to encourage consistent learning
+### 11. **Smart OCR & Noise Reduction**
+- Automatically detects "Scanned" vs "Digital" PDFs
+- advanced "Exam-Ready" noise filter removes:
+  - Headers, Footers, Page numbers
+  - Conversational filler & decorative text
+  - Hyphenated line breaks
+- Uses Tesseract OCR for image-based documents
+
+### 12. **Deep Dive Video Explainers**
+- Generate "Podcast-style" video scripts with two distinct speakers (Host & Expert)
+- Parallel asset generation for near-zero latency
+- Cinematic slides with glassmorphism overlays and AI-generated imagery
+
+### 13. **Latency-Optimized Architecture**
+- **Interactive Features** (Quiz, Planner): Powered by Mistral 7B (~3s latency)
+- **Creative Features** (Video, Flashcards): Powered by Llama 3 70B (High Intelligence)
 
 ---
 
@@ -76,8 +90,8 @@
 - **Framework**: Django 5.2.8
 - **API**: Django REST Framework with JWT authentication
 - **Database**: SQLite (development) - easily switchable to PostgreSQL/MySQL
-- **AI Integration**: Google Gemini 2.0 Flash API
-- **PDF Processing**: pdfplumber for text extraction
+- **AI Integration**: Hybrid Engine (Google Gemini 2.0 Flash + Mistral 7B + Llama 3)
+- **PDF Processing**: Hybrid OCR Pipeline (Tesseract + Poppler + pdfplumber)
 - **Authentication**: 
   - `rest_framework_simplejwt` for JWT tokens
   - `django-allauth` for Google OAuth
@@ -101,6 +115,8 @@
 - **Python**: 3.8 or higher
 - **Node.js**: 14.x or higher
 - **npm**: 6.x or higher
+- **Tesseract-OCR**: v5.0+ (Required for Scanned PDFs)
+- **Poppler**: (Required for PDF-to-Image conversion)
 - **Google Gemini API Key**: [Get it here](https://makersuite.google.com/app/apikey)
 - **Google OAuth Credentials** (optional): For social login
 
@@ -205,7 +221,7 @@ Follow the detailed guide in [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md)
 | GET | `/api/lectures/` | List all lecture notes |
 | GET | `/api/lectures/{id}/` | Get specific lecture note |
 | GET | `/api/note-details/{note_id}/` | Get note details |
-| POST | `/api/upload-pdf/` | Upload PDF lecture note |
+| POST | `/api/upload-pdf/` | Upload PDF (Supports Digital & Scanned via OCR) |
 | POST | `/api/lectures/{note_id}/summarize/` | Summarize lecture note |
 
 ### Questions & Quizzes
@@ -259,6 +275,11 @@ Follow the detailed guide in [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md)
 | POST | `/api/notifications/{id}/mark-read/` | Mark notification as read |
 | POST | `/api/notifications/mark-all-read/` | Mark all as read |
 | DELETE | `/api/notifications/{id}/delete/` | Delete notification |
+
+### Video Generation
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/video/generate/` | Generate video script, audio, and slides |
 
 ### User Profile
 | Method | Endpoint | Description |
@@ -510,8 +531,9 @@ const API_BASE_URL = 'http://localhost:8000/api';
 - Wait a few seconds and try again
 
 **2. PDF Extraction Fails**
-- Ensure PDF is text-based (not scanned image)
-- Try uploading as plain text instead
+- The system now supports SCANNED PDFs via Tesseract OCR.
+- Ensure `Tesseract-OCR` is installed on the server.
+- Ensure `poppler-utils` (or `pdftoppm`) is in the System PATH.
 
 **3. Questions Not Generating**
 - Check Gemini API key in `.env`
@@ -542,41 +564,5 @@ const API_BASE_URL = 'http://localhost:8000/api';
 - Use virtual scrolling for long lists
 
 ---
-
-## 🔒 Security Considerations
-
-### Production Checklist
-- [ ] Change `DEBUG = False` in settings.py
-- [ ] Set strong `SECRET_KEY`
-- [ ] Configure specific `ALLOWED_HOSTS`
-- [ ] Use HTTPS for all endpoints
-- [ ] Implement rate limiting on API endpoints
-- [ ] Secure Gemini API key (use environment variables)
-- [ ] Configure CORS for specific origins only
-- [ ] Enable CSRF protection
-- [ ] Use secure database (PostgreSQL/MySQL)
-- [ ] Implement proper user permissions
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-## 🙏 Acknowledgments
-
-- Google Gemini AI for intelligent question generation
-- Django & React communities
-- Material-UI for beautiful components
-- All contributors and testers
-
----
-
 
 **Happy Learning! 🎓**

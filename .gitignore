@@ -77,3 +77,4 @@ docs/_build/
 # Project specific
 # =========================
 .qodo/
+verify_*.py

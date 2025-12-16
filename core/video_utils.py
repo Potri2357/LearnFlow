@@ -8,6 +8,8 @@ import random
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 from .ai_utils import generate_ai_content
+import concurrent.futures
+import time
 
 # For TTS (Fallback to placeholder if gTTS not installed)
 try:
@@ -32,10 +34,8 @@ def generate_video_script(problem_text):
     Generates a dialogue-based JSON script for the video.
     """
     prompt = f"""
-    You are a podcast producer creating a "Deep Dive" segment for a learning app.
-    Create a lively, conversational EQUATION/CONCEPT BREAKDOWN between two hosts:
-    1. **Host (US Accent)**: Energetic, curious, sets the stage, asks the "dumb" questions that students are thinking.
-    2. **Expert (British Accent)**: Knowledgeable, calm, explanatory, uses analogies.
+    You are a podcast producer creating a "Deep Dive Explainer" for a learning app.
+    Create a detailed, information-dense dialogue between two hosts.
 
     TOPIC/PROBLEM: {problem_text}
 
@@ -46,23 +46,22 @@ def generate_video_script(problem_text):
         {{
           "speaker": "Host" | "Expert",
           "text": "<spoken_text>",
-          "visual_prompt": "<description_for_diagram_generator_or_slide>",
+          "image_prompt": "<VISUAL_ONLY_DESCRIPTION_FOR_AI_GENERATOR>",
+          "slide_headline": "<SHORT_3_5_WORD_TITLE_FOR_SLIDE>",
           "duration_estimate": <seconds>
         }}
       ]
     }}
 
     GUIDING PRINCIPLES:
-    - **Conversational Tone**: Use natural language, "Um," "So," "Wait," "Exactly!". Make it sound like a real chat.
-    - **Structure**:
-      1. **Intro**: Host introduces the "mystery" or challenge.
-      2. **Breakdown**: Expert explains, Host interrupts with clarification questions.
-      3. **Analogy**: Expert uses a real-world analogy (CRITICAL).
-      4. **Summary**: Host summarizes what they learned.
-    - **Visuals**:
-      - For the 'visual_prompt', describe simpler, clear slides or diagrams.
-      - "Title card: <Text>", "Split screen: <Text>", "Diagram of <Concept>".
-    - **Length**: Keep it concise. Around 6-10 exchanges max. 45-60 seconds total.
+    - **Visuals (CRITICAL)**: The `image_prompt` must be a DESCRIPTION OF A PICTURE, not a description of a concept.
+      - BAD: "Explain gravity."
+      - GOOD: "A surreal digital art of a floating red apple in space, cinematic lighting."
+      - GOOD: "A blueprint schematic of a neural network, glowing lines, dark blue background."
+      - KEYWORD: Beautiful, 8k, Detailed, Abstract, Cinematic.
+    - **Slide Content**: `slide_headline` should be the "Key Takeaway" of that sentence.
+    - **Tone**: Professional, Documentary style.
+    - **Length**: 4-6 scenes. Focused. Keep it under 45 seconds total generation.
     """
     
     try:
@@ -85,10 +84,32 @@ def generate_video_script(problem_text):
         print(f"Error generating video script: {error_msg}")
         return None
 
+def fetch_ai_image(prompt, style="cinematic"):
+    """
+    Fetches an AI-generated image from Pollinations.ai (No key required).
+    """
+    try:
+        # Enhance prompt based on style
+        style_prompt = ""
+        if style == "cinematic":
+            style_prompt = "cinematic lighting, hyperrealistic, 8k, movie scene"
+        elif style == "cartoon":
+            style_prompt = "vibrant vector art, flat illustration, clean lines, colorful"
+        elif style == "sketch":
+            style_prompt = "technical pencil sketch, blueprint, diagram style, white on blue"
+        
+        full_prompt = f"{prompt}, {style_prompt}".replace(" ", "%20")
+        url = f"https://image.pollinations.ai/prompt/{full_prompt}?width=1280&height=720&nologo=true"
+        
+        return download_image(url)
+    except Exception as e:
+        print(f"Failed to fetch AI image: {e}")
+        return None
+
 def generate_kroki_diagram(visual_description):
     """
     Stage 2: Visual Asset Generation (Diagrams)
-    Uses Gemini to convert the description into Mermaid code, then Kroki to render.
+    Uses AI to convert the description into Mermaid code, then Kroki to render.
     """
     if not visual_description or len(visual_description) < 10:
         return None
@@ -114,7 +135,6 @@ def generate_kroki_diagram(visual_description):
     
     try:
         mermaid_code = generate_ai_content(mermaid_prompt).strip()
-        # mermaid_code = response.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
         mermaid_code = mermaid_code.replace("```mermaid", "").replace("```", "").strip()
         
         # 2. Encode for Kroki
@@ -168,76 +188,94 @@ def generate_audio_assets(script_data, output_dir="media/audio"):
                 
     return audio_files
 
-def create_text_slide(title, subtitle=None, speaker="Host", output_dir="media/images"):
+def create_cinematic_slide(title, image_path=None, speaker="Host", output_dir="media/images"):
     """
-    Creates a text slide.
-    Color codes based on speaker to visually reinforce who is talking.
+    Composites an image with a 'Glassmorphism' text card overlay.
     """
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
         
     width, height = 1280, 720
     
-    # Theme colors
-    if speaker.lower() == "expert":
-        bg_color = (40, 55, 71) # Dark Blue-Grey for Expert
-        accent_color = (100, 200, 255)
-    else:
-        bg_color = (200, 70, 70) # Muted Red/Maroon for Host? Or maybe just Dark Slate?
-        # Let's go with a vibrant Dark Purple for Host
-        bg_color = (60, 20, 60)
-        accent_color = (255, 100, 200)
-
-    # Gradient simulation (simple) - just solid for now to save complexity
-    img = Image.new('RGB', (width, height), bg_color)
-    d = ImageDraw.Draw(img)
-    
-    try:
-        # Try a slightly better font if available
-        font_large = ImageFont.truetype("arial.ttf", 70)
-        font_small = ImageFont.truetype("arial.ttf", 40)
-    except IOError:
-        font_large = ImageFont.load_default()
-        font_small = ImageFont.load_default()
-        
-    # Draw Speaker Tag
-    d.text((50, 50), speaker.upper(), font=font_small, fill=accent_color)
-    
-    # Wrap text helper
-    def draw_wrapped_text(text, font, y_start):
-        lines = []
-        words = text.split()
-        current_line = []
-        for word in words:
-            # check width
-            test_line = ' '.join(current_line + [word])
-            bbox = d.textbbox((0, 0), test_line, font=font)
-            if bbox[2] < 1100: # specific width limit
-                current_line.append(word)
+    # 1. Base Image (Background)
+    if image_path and os.path.exists(image_path):
+        try:
+            img = Image.open(image_path).convert("RGB")
+            # Resize/Crop to fill
+            img_ratio = img.width / img.height
+            target_ratio = width / height
+            if img_ratio > target_ratio:
+                # Too wide, crop width
+                new_width = int(img.height * target_ratio)
+                left = (img.width - new_width) // 2
+                img = img.crop((left, 0, left + new_width, img.height))
             else:
-                lines.append(' '.join(current_line))
-                current_line = [word]
-        lines.append(' '.join(current_line))
+                # Too tall, crop height
+                new_height = int(img.width / target_ratio)
+                top = (img.height - new_height) // 2
+                img = img.crop((0, top, img.width, top + new_height))
+            img = img.resize((width, height), Image.Resampling.LANCZOS)
+            
+            # Darken it slightly for text contrast
+            overlay = Image.new('RGB', (width, height), (0, 0, 0))
+            img = Image.blend(img, overlay, 0.3) # 30% darkness
+            
+        except Exception as e:
+            print(f"Error processing image {image_path}: {e}")
+            img = Image.new('RGB', (width, height), (20, 20, 20))
+    else:
+        # Fallback Gradient
+        img = Image.new('RGB', (width, height), (30, 30, 40))
         
-        y = y_start
-        for line in lines:
-            bbox = d.textbbox((0, 0), line, font=font)
-            line_w = bbox[2] - bbox[0]
-            x = (width - line_w) / 2
-            d.text((x, y), line, font=font, fill=(255, 255, 255))
-            y += bbox[3] - bbox[1] + 10
-        return y
+    d = ImageDraw.Draw(img, 'RGBA')
+    
+    # 2. Glass Card Overlay (Bottom Left)
+    card_w, card_h = 1100, 200 # Wider, at bottom
+    card_x, card_y = 90, 450
+    
+    # Semi-transparent white/black rect
+    if speaker == "Expert":
+        card_color = (255, 255, 255, 220) # Bright for Expert
+        text_color = (0, 40, 50)
+        tag_color = (0, 100, 150)
+    else:
+        card_color = (10, 10, 20, 210) # Dark for Host
+        text_color = (255, 255, 255)
+        tag_color = (180, 100, 255)
 
-    # Draw Title (the visual prompt or main text summary)
-    # If title is too long, we truncate or wrap
-    y_pos = 250
-    draw_wrapped_text(title, font_large, y_pos)
+    # Draw rounded rect (manually or just rect for now)
+    d.rectangle([card_x, card_y, card_x + card_w, card_y + card_h], fill=card_color)
     
-    if subtitle:
-        # Show subtitle at bottom?
-        pass
+    # 3. Text
+    try:
+        font_title = ImageFont.truetype("arialbd.ttf", 55)
+        font_tag = ImageFont.truetype("arial.ttf", 30)
+    except:
+        font_title = ImageFont.load_default()
+        font_tag = ImageFont.load_default()
+        
+    # Speaker Tag
+    d.text((card_x + 30, card_y + 30), speaker.upper(), font=font_tag, fill=tag_color)
     
-    filename = f"text_slide_{random.randint(1000,9999)}.png"
+    # Headline (Wrapped)
+    # Simple wrap
+    words = title.split()
+    lines = []
+    line = []
+    for w in words:
+        if len(' '.join(line + [w])) < 35: # Approx char count
+            line.append(w)
+        else:
+            lines.append(' '.join(line))
+            line = [w]
+    lines.append(' '.join(line))
+    
+    y_text = card_y + 80
+    for line in lines[:2]: # Max 2 lines
+        d.text((card_x + 30, y_text), line, font=font_title, fill=text_color)
+        y_text += 65
+        
+    filename = f"slide_{random.randint(1000,9999)}.png"
     filepath = os.path.join(output_dir, filename)
     img.save(filepath)
     return filepath
@@ -278,30 +316,30 @@ def assemble_video(script, audio_files, visual_assets, output_dir="media/video")
         audio_clip = AudioFileClip(audio_info["file"])
         duration = audio_clip.duration + 0.3
         
-        # 2. Get Visual
-        # Did we generate a specific diagram for this scene?
+        # 2. Get Visual (Slide)
         visual_info = next((v for v in visual_assets if v["scene"] == i), None)
         image_path = None
         
         if visual_info and visual_info.get("local_path"):
             image_path = visual_info["local_path"]
         else:
-            # Fallback: Create text slide based on visual_prompt or text summary
-            # We use visual_prompt if it's text-friendly, otherwise just the speaker name/context
-            slide_text = scene.get("visual_prompt", "")
-            if len(slide_text) > 50 or "diagram" in slide_text.lower():
-                # If prompt is too long/complex description, maybe just use the scene text summary?
-                # Actually, let's just show what they are talking about (first 10 words of text)
-                slide_text = " ".join(scene.get("text", "").split()[:8]) + "..."
+            # Emergency fallback if slide gen failed
+            image_path = create_cinematic_slide(scene.get("slide_headline", "Deep Dive"), None, scene.get("speaker"))
             
-            image_path = create_text_slide(slide_text, speaker=scene.get("speaker", "Host"))
-            
-        # 3. Create Clip
+        # 3. Create Clip with Ken Burns (Zoom)
         try:
             # MoviePy v2 compatibility
             img_clip = ImageClip(image_path).with_duration(duration)
+            
+            # Simple Zoom: Crop center
+            # w, h = img_clip.size
+            # img_clip = img_clip.with_effects([vfx.Resize(lambda t: 1 + 0.04 * t)]) # Zoom in 4%
+            # Manual resize for older moviepy or safety
+            # img_clip = img_clip.resized(lambda t: 1 + 0.04 * t)
+            
             img_clip = img_clip.with_audio(audio_clip)
-            img_clip = img_clip.resized(height=720) 
+            # Resize ensure 720p
+            img_clip = img_clip.resized(height=720)
             
             clips.append(img_clip)
         except Exception as e:
@@ -329,7 +367,7 @@ def assemble_video(script, audio_files, visual_assets, output_dir="media/video")
             f.write(str(e))
         return None
 
-def run_video_workflow(problem_text):
+def run_video_workflow(problem_text, style="cinematic"):
     """
     Orchestrates the full Deep Dive Video workflow.
     """
@@ -352,39 +390,65 @@ def run_video_workflow(problem_text):
     
     visual_assets = []
     
-    # 2. Process Visuals (Diagrams)
-    # Only generate diagrams if clearly requested in visual_prompt
-    for i, scene in enumerate(script.get("scenes", [])):
-        v_prompt = scene.get("visual_prompt", "").lower()
-        has_diagram = "diagram" in v_prompt or "chart" in v_prompt or "graph" in v_prompt
+    # Helpers for parallel execution
+    def process_scene_visual(scene_idx, scene_data):
+        # 1. Check for diagram
+        v_prompt = scene_data.get("image_prompt", scene_data.get("visual_prompt", "")).lower()
+        has_diagram = "diagram" in v_prompt or "chart" in v_prompt
+        
+        image_path = None
         
         if has_diagram:
-            print(f"Generatign Diagram for Scene {i+1}...")
-            url = generate_kroki_diagram(scene["visual_prompt"])
+            print(f"Generating Diagram for Scene {scene_idx+1}...")
+            url = generate_kroki_diagram(v_prompt)
             if url:
-                local_path = download_image(url, os.path.join(MEDIA_ROOT, "images"))
-                if local_path:
-                    visual_asset = {"type": "image", "scene": i, "url": url, "local_path": local_path}
-                    results["assets"].append(visual_asset)
-                    visual_assets.append(visual_asset)
-    
-    # 3. Audio
+                image_path = download_image(url, os.path.join(MEDIA_ROOT, "images"))
+        
+        # 2. If no diagram, fetch AI image
+        if not image_path and len(v_prompt) > 3:
+             print(f"Fetching AI Image for Scene {scene_idx+1}: {v_prompt[:30]}...")
+             image_path = fetch_ai_image(v_prompt, style=style)
+
+        # 3. Composite into Slide
+        headline = scene_data.get("slide_headline", scene_data.get("text", "")[:30])
+        speaker = scene_data.get("speaker", "Host")
+        final_slide_path = create_cinematic_slide(headline, image_path, speaker, os.path.join(MEDIA_ROOT, "images"))
+        
+        return {"type": "slide", "scene": scene_idx, "local_path": final_slide_path}
+
+    # Parallel Execution
+    visual_assets = []
     audio_files = []
-    if HAS_GTTS:
-        print("Generating Voiceovers...")
-        audio_files = generate_audio_assets(script, os.path.join(MEDIA_ROOT, "audio"))
-        results["audio_files"] = audio_files
     
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        # 1. Start Audio Generation
+        audio_future = None
+        if HAS_GTTS:
+            print("Generating Voiceovers (Parallel)...")
+            audio_future = executor.submit(generate_audio_assets, script, os.path.join(MEDIA_ROOT, "audio"))
+        
+        # 2. Start Visual Generation
+        visual_futures = []
+        for i, scene in enumerate(script.get("scenes", [])):
+            visual_futures.append(executor.submit(process_scene_visual, i, scene))
+            
+        # 3. Collect Results
+        if audio_future:
+            audio_files = audio_future.result()
+            results["audio_files"] = audio_files
+            
+        for f in concurrent.futures.as_completed(visual_futures):
+            res = f.result()
+            if res:
+                visual_assets.append(res)
+                results["assets"].append(res)
+
     # 4. Assembly
     video_url = None
     if HAS_MOVIEPY and audio_files:
         print("Assembling video segments...")
         video_path = assemble_video(script, audio_files, visual_assets, os.path.join(MEDIA_ROOT, "video"))
         if video_path:
-            # Convert absolute path to relative URL
-            # Note: in Django settings.MEDIA_URL is usually '/media/'
-            # We assume MEDIA_ROOT is mapped to /media/ URL.
-            # Filename is the last part
             fname = os.path.basename(video_path)
             video_url = f"/media/video/{fname}"
             results["video_url"] = video_url

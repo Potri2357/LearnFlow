@@ -256,9 +256,9 @@ Return ONLY JSON in this format:
 ]
 """
 
-    # ==== 3. Send to Gemini ====
+    # ==== 3. Send to AI (Use Fast Mistral 7B) ====
     try:
-        output_text = generate_ai_content(mcq_prompt)
+        output_text = generate_ai_content(mcq_prompt, model="mistralai/mistral-7b-instruct:free")
         print("RAW AI QUESTION OUTPUT:", output_text)
 
         # Extract text - NO LONGER NEEDED as generate_ai_content returns str
@@ -846,8 +846,8 @@ Rules:
         # Try primary model (verified available)
         # Try primary model (verified available)
         try:
-            # Returns plain text
-            plan_text = generate_ai_content(prompt)
+            # Returns plain text - use Mistral for speed
+            plan_text = generate_ai_content(prompt, model="mistralai/mistral-7b-instruct:free")
         except Exception as e:
             print(f"AI generation failed: {e}")
             raise e
@@ -1177,7 +1177,8 @@ Rules:
     # Call AI API
     # -----------------------------
     try:
-        data = call_gemini_generate(prompt)
+        # Use fast Mistral for insights
+        data = generate_ai_content(prompt, model="mistralai/mistral-7b-instruct:free")
 
         # data is now simple text string
         ai_text = data.replace("**", "").strip()
@@ -1195,6 +1196,8 @@ def upload_pdf(request):
     """
     Upload PDF, extract text, save LectureNote, seed topics in TopicWeakness and TopicMastery
     """
+    from .ocr_utils import process_document_pipeline
+    
     try:
         user = request.user
         title = request.data.get("title", request.FILES.get("file").name if request.FILES.get("file") else "Untitled")
@@ -1202,10 +1205,16 @@ def upload_pdf(request):
         if not file_obj:
             return Response({"error": "No PDF uploaded"}, status=400)
 
-        extracted_text = extract_text_from_pdf(file_obj)
+        # 1. Attempt Digital Extraction first
+        initial_text = extract_text_from_pdf(file_obj)
+        
+        # 2. Run Advanced Pipeline (OCR check -> Cleanup -> Compression)
+        # Reset file pointer for OCR reading if needed
+        file_obj.seek(0)
+        final_content = process_document_pipeline(file_obj=file_obj, extracted_text_if_digital=initial_text)
 
-        # Check for duplicate content
-        existing_note = LectureNote.objects.filter(user=user, content=extracted_text).first()
+        # Check for duplicate content (using final processed content)
+        existing_note = LectureNote.objects.filter(user=user, content=final_content).first()
         if existing_note:
              serializer = LectureNoteSerializer(existing_note)
              return Response({
@@ -1219,11 +1228,11 @@ def upload_pdf(request):
             user=user,
             title=title,
             file=file_obj,
-            content=extracted_text
+            content=final_content # Storing the CLEANED, COMPRESSED text
         )
 
         # extract topics and seed weakness + mastery
-        topics = extract_topics(extracted_text)
+        topics = extract_topics(final_content)
 
         if not topics:
             topics = ["general"]
@@ -1294,8 +1303,8 @@ Content:
 """
 
 
-        # Use the call_gemini_generate function which has the correct API format
-        raw_text = call_gemini_generate(prompt)
+        # Use Fast Mistral for MCQs
+        raw_text = generate_ai_content(prompt, model="mistralai/mistral-7b-instruct:free")
         
         # Extract text from response - NO LONGER NEEDED
         # raw_text = response_data...
@@ -1655,12 +1664,19 @@ def generate_flashcards(request):
     """
     
     try:
-        text = call_gemini_generate(prompt)
+        # Revert to robust model (70B) if Mistral failed
+        text = generate_ai_content(prompt)
         # text = response["candidates"][0]["content"]["parts"][0]["text"]
         
         # Clean JSON
-        text = text.replace("```json", "").replace("```", "").strip()
-        flashcards = json.loads(text)
+        # Clean JSON with Regex
+        import re
+        cleaned = text.strip().replace("```json", "").replace("```", "").strip()
+        m = re.search(r'\[.*\]', cleaned, flags=re.DOTALL)
+        if m:
+            cleaned = m.group(0)
+            
+        flashcards = json.loads(cleaned)
         
         return Response({"flashcards": flashcards})
     except Exception as e:
@@ -1735,7 +1751,12 @@ Requirements:
             }, status=500)
         
         # Clean up markdown code blocks if present
+        import re
         cleaned = raw_text.replace("```json", "").replace("```", "").strip()
+        # Regex find the main object
+        m = re.search(r'\{.*\}', cleaned, flags=re.DOTALL)
+        if m:
+            cleaned = m.group(0)
         
         try:
             summary_data = json.loads(cleaned)
@@ -1779,6 +1800,7 @@ def generate_video_explanation(request):
     user = request.user
     text = request.data.get("text")
     question_id = request.data.get("question_id")
+    style = request.data.get("style", "cinematic")
     
     if question_id:
         q = get_object_or_404(Question, id=question_id)
@@ -1788,7 +1810,7 @@ def generate_video_explanation(request):
     if not text:
         return Response({"error": "Problem text or question_id required"}, status=400)
         
-    result = run_video_workflow(text)
+    result = run_video_workflow(text, style=style)
     
     if "error" in result:
         return Response(result, status=500)
