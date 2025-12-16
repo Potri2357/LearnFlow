@@ -12,7 +12,7 @@ from .views import (
     # Exam preparation views
     upload_exam_syllabus, upload_previous_papers, generate_exam_questions,
     get_exam_questions, update_exam_question, delete_exam_question, list_exam_syllabi,
-    generate_exam_strategy
+    generate_exam_strategy, generate_video_explanation
 )
 from .auth_views import CustomTokenObtainPairView
 
@@ -80,4 +80,7 @@ urlpatterns = [
     path('exam/syllabus/<int:syllabus_id>/strategy/', generate_exam_strategy, name='generate_exam_strategy'),
     path('exam/question/<int:question_id>/update/', update_exam_question, name='update_exam_question'),
     path('exam/question/<int:question_id>/delete/', delete_exam_question, name='delete_exam_question'),
+    
+    # Video Generation
+    path('video/generate/', generate_video_explanation, name='generate_video_explanation'),
 ]

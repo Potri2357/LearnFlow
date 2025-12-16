@@ -32,6 +32,7 @@ import time
 from datetime import timezone as dt_timezone
 
 import google.generativeai as genai
+from .ai_utils import generate_ai_content
 
 # Import exam preparation views
 from .exam_views import (
@@ -42,8 +43,7 @@ from .exam_views import (
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 GEMINI_API_URL = os.environ.get("GEMINI_API_URL")
-
-genai.configure(api_key=GEMINI_API_KEY)
+# genai.configure(api_key=GEMINI_API_KEY) # Comment out if not used, or leave as is if other parts use it directly
 
 def get_current_user(request=None):
     """Get the current authenticated user or fallback to first user"""
@@ -72,43 +72,7 @@ def clean_option_text(text):
 
 
 def call_gemini_generate(prompt):
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
-
-    headers = {
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {
-                        "text": prompt
-                    }
-                ]
-            }
-        ]
-    }
-
-    # Retry logic for 429 errors
-    max_retries = 3
-    base_delay = 2
-
-    for attempt in range(max_retries):
-        try:
-            response = requests.post(url, json=payload, headers=headers, timeout=60)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 429 and attempt < max_retries - 1:
-                sleep_time = base_delay * (2 ** attempt)
-                print(f"Gemini API 429 Rate Limit. Retrying in {sleep_time}s... (Attempt {attempt + 1}/{max_retries})")
-                time.sleep(sleep_time)
-                continue
-            raise
-    
-    # Should not be reached if raise_for_status works, but safe fallback
-    return response.json()
+    return generate_ai_content(prompt)
 
 
 
@@ -292,46 +256,13 @@ Return ONLY JSON in this format:
 ]
 """
 
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {"text": mcq_prompt}
-                ]
-            }
-        ]
-    }
-
     # ==== 3. Send to Gemini ====
     try:
-        # Retry logic for 429 errors
-        max_retries = 3
-        base_delay = 2
-        
-        response = None
-        for attempt in range(max_retries):
-            try:
-                response = requests.post(
-                    GEMINI_API_URL + f"?key={GEMINI_API_KEY}",
-                    headers={"Content-Type": "application/json"},
-                    json=payload,
-                    timeout=60
-                )
-                response.raise_for_status()
-                break # Success
-            except requests.exceptions.HTTPError as e:
-                if e.response.status_code == 429 and attempt < max_retries - 1:
-                    sleep_time = base_delay * (2 ** attempt)
-                    print(f"Gemini API 429 Rate Limit in generate_questions. Retrying in {sleep_time}s... (Attempt {attempt + 1}/{max_retries})")
-                    time.sleep(sleep_time)
-                    continue
-                raise
+        output_text = generate_ai_content(mcq_prompt)
+        print("RAW AI QUESTION OUTPUT:", output_text)
 
-        raw = response.json()
-        print("RAW GEMINI QUESTION OUTPUT:", raw)
-
-        # Extract text
-        output_text = raw["candidates"][0]["content"]["parts"][0]["text"]
+        # Extract text - NO LONGER NEEDED as generate_ai_content returns str
+        # output_text = raw["candidates"][0]["content"]["parts"][0]["text"]
 
     except Exception as e:
         return JsonResponse({"error": f"Gemini error: {e}"}, status=500)
@@ -912,32 +843,16 @@ Rules:
 - Be concise and actionable
 """
 
-        def generate_with_model(model_name):
-            print(f"Attempting study plan generation with {model_name}...")
-            model = genai.GenerativeModel(model_name)
-            result = model.generate_content(prompt)
-            return result
-
+        # Try primary model (verified available)
         # Try primary model (verified available)
         try:
-            result = generate_with_model('gemini-2.0-flash')
+            # Returns plain text
+            plan_text = generate_ai_content(prompt)
         except Exception as e:
-            print(f"Primary model (gemini-1.5-flash) failed: {e}")
-            print("Falling back to gemini-pro...")
-            try:
-                result = generate_with_model('gemini-pro')
-            except Exception as e2:
-                print(f"Fallback model also failed: {e2}")
-                raise e2
+            print(f"AI generation failed: {e}")
+            raise e
 
-        # get text robustly
-        try:
-            plan_text = result.text
-        except Exception:
-            try:
-                plan_text = result.candidates[0].content.parts[0].text
-            except:
-                plan_text = str(result)
+        # fallback checks removed as generate_ai_content handles format
 
         # clean obvious wrappers
         plan_text = plan_text.replace("```", "").strip()
@@ -1259,16 +1174,13 @@ Rules:
 """
 
     # -----------------------------
-    # Call Gemini API
+    # Call AI API
     # -----------------------------
     try:
         data = call_gemini_generate(prompt)
 
-        try:
-            ai_text = data["candidates"][0]["content"]["parts"][0]["text"]
-            ai_text = ai_text.replace("**", "").strip()
-        except:
-             ai_text = str(data)
+        # data is now simple text string
+        ai_text = data.replace("**", "").strip()
 
         return Response({"insights": ai_text})
 
@@ -1383,21 +1295,10 @@ Content:
 
 
         # Use the call_gemini_generate function which has the correct API format
-        response_data = call_gemini_generate(prompt)
+        raw_text = call_gemini_generate(prompt)
         
-        # Extract text from response
-        raw_text = None
-        if isinstance(response_data, dict):
-            try:
-                raw_text = response_data["candidates"][0]["content"]["parts"][0]["text"]
-            except (KeyError, IndexError):
-                try:
-                    # Fallback: try to get text directly
-                    raw_text = response_data.get("text", str(response_data))
-                except Exception:
-                    raw_text = str(response_data)
-        else:
-            raw_text = str(response_data)
+        # Extract text from response - NO LONGER NEEDED
+        # raw_text = response_data...
 
         cleaned = raw_text.strip().replace("```json", "").replace("```", "").strip()
 
@@ -1754,8 +1655,8 @@ def generate_flashcards(request):
     """
     
     try:
-        response = call_gemini_generate(prompt)
-        text = response["candidates"][0]["content"]["parts"][0]["text"]
+        text = call_gemini_generate(prompt)
+        # text = response["candidates"][0]["content"]["parts"][0]["text"]
         
         # Clean JSON
         text = text.replace("```json", "").replace("```", "").strip()
@@ -1821,37 +1722,17 @@ Requirements:
 - Return ONLY valid JSON, no markdown code blocks
 """
 
-        def generate_with_model(model_name):
-            print(f"Attempting lecture summary with {model_name}...")
-            model = genai.GenerativeModel(model_name)
-            result = model.generate_content(prompt)
-            return result
-
-        # Try primary model (verified available)
         try:
-            result = generate_with_model('gemini-2.0-flash')
+            # Use centralized utility for robust generation
+            # Returns simple text now
+            raw_text = generate_ai_content(prompt).strip()
+                
         except Exception as e:
-            print(f"Primary model (gemini-1.5-flash) failed: {e}")
-            print("Falling back to gemini-pro...")
-            try:
-                result = generate_with_model('gemini-pro')
-            except Exception as e2:
-                print(f"Fallback model also failed: {e2}")
-                traceback.print_exc()
-                return Response({
-                    "error": "Failed to generate summary with available models",
-                    "details": str(e2),
-                    "primary_error": str(e)
-                }, status=500)
-
-        # Extract text robustly (handle different response formats)
-        try:
-            raw_text = result.text.strip()
-        except Exception:
-            try:
-                raw_text = result.candidates[0].content.parts[0].text.strip()
-            except:
-                raw_text = str(result)
+            traceback.print_exc()
+            return Response({
+                "error": "Failed to generate summary with available models",
+                "details": str(e)
+            }, status=500)
         
         # Clean up markdown code blocks if present
         cleaned = raw_text.replace("```json", "").replace("```", "").strip()
@@ -1883,3 +1764,33 @@ Requirements:
         return Response({
             "error": str(e)
         }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def generate_video_explanation(request):
+    """
+    Generate a video explanation script + diagram + audio.
+    POST: { "text": "Problem description..." } OR { "question_id": 123 }
+    """
+    from .models import Question
+    from .video_utils import run_video_workflow
+    
+    user = request.user
+    text = request.data.get("text")
+    question_id = request.data.get("question_id")
+    
+    if question_id:
+        q = get_object_or_404(Question, id=question_id)
+        # Use question text, and maybe the answer/explanation if available for better context
+        text = f"Question: {q.question_text}\nAnswer: {q.correct_option}\nExplanation: {q.explanation}"
+        
+    if not text:
+        return Response({"error": "Problem text or question_id required"}, status=400)
+        
+    result = run_video_workflow(text)
+    
+    if "error" in result:
+        return Response(result, status=500)
+        
+    return Response(result)

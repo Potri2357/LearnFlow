@@ -4,16 +4,12 @@ import traceback
 import json
 import os
 import google.generativeai as genai
+from .ai_utils import generate_ai_content
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import permissions, status
 from .models import ExamSyllabus, PreviousQuestionPaper, ExamQuestion, ExamConfiguration
-
-# Configure Gemini
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
 
 import re
 
@@ -217,9 +213,10 @@ Return a concise analysis (max 300 words).
 """
             
             try:
-                model = genai.GenerativeModel('gemini-2.0-flash')
-                result = model.generate_content(pattern_prompt)
-                pattern_analysis = result.text.strip()
+                try:
+                    pattern_analysis = generate_ai_content(pattern_prompt).strip()
+                except:
+                    pattern_analysis = "Pattern analysis unavailable"
                 print(f"Pattern Analysis: {pattern_analysis}")
             except Exception as e:
                 print(f"Pattern analysis failed: {e}")
@@ -294,34 +291,15 @@ Return ONLY valid JSON array:
 ]
 """
         
-        def generate_with_model(model_name):
-            print(f"Generating questions with {model_name}...")
-            model = genai.GenerativeModel(model_name)
-            result = model.generate_content(question_prompt)
-            return result
-        
         try:
-            result = generate_with_model('gemini-2.0-flash')
+            raw_text = generate_ai_content(question_prompt).strip()
         except Exception as e:
-            print(f"Primary model failed: {e}")
-            try:
-                result = generate_with_model('gemini-pro')
-            except Exception as e2:
-                print(f"Fallback model failed: {e2}")
-                return Response({
-                    "error": "Failed to generate questions",
-                    "details": str(e2)
-                }, status=500)
-        
-        # Extract and parse response
-        # Parse JSON using robust helper
-        try:
-            raw_text = result.text.strip()
-        except:
-            try:
-                raw_text = result.candidates[0].content.parts[0].text.strip()
-            except:
-                raw_text = str(result)
+            raw_text = ""
+            print(f"Generation failed: {e}")
+            return Response({
+                "error": "Failed to generate questions",
+                "details": str(e)
+            }, status=500)
                 
         try:
             questions_data = clean_and_parse_json(raw_text)
@@ -553,22 +531,30 @@ OUTPUT FORMAT (JSON ONLY):
         }}
         """
         
-        model = genai.GenerativeModel('gemini-2.0-flash')
-        result = model.generate_content(prompt)
+        try:
+            raw_text = generate_ai_content(prompt)
+        except Exception as e:
+            # handle error appropriately
+            raw_text = ""
+            print(f"Strategy generation failed: {e}")
+            raise e
+        except Exception as e:
+            print(f"Strategy generation failed: {e}")
+            return Response({"error": str(e)}, status=500)
         
         # Parse JSON
         # Parse JSON using robust helper
         try:
-            strategy_data = clean_and_parse_json(result.text)
+            strategy_data = clean_and_parse_json(raw_text)
             return Response(strategy_data)
             
         except Exception as e:
             print(f"JSON parsing error: {e}")
-            print(f"Raw response: {result.text[:500]}")
+            print(f"Raw response: {raw_text[:500]}")
             return Response({
                 "error": "Failed to parse AI response",
                 "details": "The AI model returned an invalid format. Please try again.",
-                "raw_response": result.text[:1000]
+                "raw_response": raw_text[:1000]
             }, status=500)
             
     except Exception as e:
