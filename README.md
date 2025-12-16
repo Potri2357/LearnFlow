@@ -569,18 +569,6 @@ const API_BASE_URL = 'http://localhost:8000/api';
 
 ---
 
-## 📝 License
-
-This project is licensed under the MIT License.
-
----
-
-## 👨‍💻 Author
-
-**Potri2357**
-
----
-
 ## 🙏 Acknowledgments
 
 - Google Gemini AI for intelligent question generation
@@ -590,12 +578,5 @@ This project is licensed under the MIT License.
 
 ---
 
-## 📞 Support
-
-For issues and questions:
-- Open an issue on GitHub
-- Email: your-email@example.com
-
----
 
 **Happy Learning! 🎓**
