@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Smart Flashcards Interface</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;family=Noto+Sans:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+            extend: {
+                colors: {
+                "primary": "#137fec",
+                "background-light": "#f6f7f8",
+                "background-dark": "#101922",
+                "surface-dark": "#192633",
+                "surface-light": "#ffffff",
+                "surface-highlight": "#233648",
+                "text-secondary": "#92adc9",
+                },
+                fontFamily: {
+                "display": ["Lexend", "sans-serif"],
+                "body": ["Noto Sans", "sans-serif"],
+                },
+                borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+            },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #324d67; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white h-screen flex overflow-hidden">
+<!-- Sidebar -->
+<aside class="w-64 bg-background-dark border-r border-[#233648] flex flex-col flex-shrink-0 z-20 hidden md:flex">
+<div class="p-6 flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-xl size-10 bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-2xl">school</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-white text-lg font-bold leading-none">FlashMaster AI</h1>
+<p class="text-text-secondary text-xs font-normal mt-1">Adaptive Learning</p>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-2 px-4 overflow-y-auto">
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary hover:text-white hover:bg-surface-highlight rounded-lg transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-surface-highlight text-white rounded-lg transition-colors shadow-sm" href="#">
+<span class="material-symbols-outlined text-primary fill-1">style</span>
+<span class="text-sm font-medium">Decks</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary hover:text-white hover:bg-surface-highlight rounded-lg transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">cloud_upload</span>
+<span class="text-sm font-medium">Uploads</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary hover:text-white hover:bg-surface-highlight rounded-lg transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">bar_chart</span>
+<span class="text-sm font-medium">Analytics</span>
+</a>
+<div class="my-2 border-t border-[#233648]"></div>
+<p class="px-4 text-xs font-semibold text-[#5a718a] uppercase tracking-wider mb-1">My Decks</p>
+<a class="flex items-center gap-3 px-4 py-2 text-text-secondary hover:text-white hover:bg-surface-highlight rounded-lg transition-colors" href="#">
+<span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+<span class="text-sm">Biology 101</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-text-secondary hover:text-white hover:bg-surface-highlight rounded-lg transition-colors" href="#">
+<span class="w-2 h-2 rounded-full bg-amber-400"></span>
+<span class="text-sm">History Midterm</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-text-secondary hover:text-white hover:bg-surface-highlight rounded-lg transition-colors" href="#">
+<span class="w-2 h-2 rounded-full bg-purple-400"></span>
+<span class="text-sm">Spanish Vocab</span>
+</a>
+</nav>
+<div class="p-4 border-t border-[#233648]">
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary hover:text-white hover:bg-surface-highlight rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+<div class="flex items-center gap-3 mt-4 px-4">
+<div class="size-8 rounded-full bg-cover bg-center" data-alt="User profile avatar showing a generic silhouette" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC1AfzZG09O40d4uteLJxjm557NYCp8g7oDgTAoElVx-LmFB0rx-vYN6Tpj4-dZKZHzzkJtPTPgiM4_HEG3pxlO8FfrmAa2UiLBSx9_-rMGXkr2q7AErytcQ7r76SvqAjEpt647OPxZXupIIvZUt8O5k-LDyEdYnukOtY1NIRU75m5xqXj8EEBlXCjuqSdqwuFQS9l9rJ1tA-ANsdIgBRawaigdVkJlicFEaJ9VnsYtPfJ2m1XVychfws4od_uCbIKEOIXHSqhIHnY')"></div>
+<div class="flex flex-col">
+<p class="text-sm text-white font-medium">Alex Student</p>
+<p class="text-xs text-text-secondary">Pro Plan</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col relative overflow-hidden bg-background-light dark:bg-[#0e151d]">
+<!-- Header -->
+<header class="flex-shrink-0 bg-background-light dark:bg-background-dark border-b border-[#233648] px-6 py-4 flex flex-wrap justify-between items-center gap-4 z-10">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-3">
+<h2 class="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Biology 101 - Cell Structure</h2>
+<span class="bg-primary/20 text-primary text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">Active Deck</span>
+</div>
+<p class="text-slate-500 dark:text-text-secondary text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-base">style</span> 24 Cards Remaining
+                    <span class="w-1 h-1 rounded-full bg-slate-600"></span>
+<span class="material-symbols-outlined text-base text-emerald-500">trending_up</span> 85% Mastery Score
+                </p>
+</div>
+<div class="flex items-center gap-3">
+<button class="hidden md:flex items-center justify-center h-10 px-4 rounded-lg bg-surface-highlight hover:bg-[#2d4257] text-white text-sm font-bold transition-colors">
+<span class="material-symbols-outlined mr-2 text-base">fullscreen</span>
+                    Focus Mode
+                </button>
+<button class="md:hidden p-2 text-white">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</header>
+<!-- Workspace Grid -->
+<div class="flex-1 overflow-y-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Left Panel: Source & Generation -->
+<section class="lg:col-span-4 xl:col-span-3 flex flex-col gap-6">
+<!-- AI Generator Card -->
+<div class="bg-white dark:bg-surface-dark rounded-xl p-5 shadow-sm border border-slate-200 dark:border-none">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary">auto_awesome</span>
+<h3 class="text-slate-900 dark:text-white font-bold text-lg">Generate Cards</h3>
+</div>
+<div class="flex flex-col gap-4">
+<div class="border-2 border-dashed border-slate-300 dark:border-[#233648] rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 dark:hover:bg-[#1e2d3d] transition-colors group">
+<span class="material-symbols-outlined text-3xl text-slate-400 dark:text-[#4b6076] group-hover:text-primary mb-2">cloud_upload</span>
+<p class="text-sm font-medium text-slate-600 dark:text-text-secondary">Drag &amp; drop lecture notes</p>
+<p class="text-xs text-slate-400 dark:text-[#5a718a] mt-1">PDF, DOCX, TXT</p>
+</div>
+<div class="relative">
+<textarea class="w-full bg-slate-100 dark:bg-[#111a22] text-slate-900 dark:text-white text-sm rounded-lg p-3 min-h-[120px] focus:ring-2 focus:ring-primary focus:outline-none border-none resize-none placeholder-slate-400 dark:placeholder-[#4b6076]" placeholder="Or paste your text notes here..."></textarea>
+</div>
+<button class="w-full h-10 flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold text-sm transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-lg">spark</span>
+                            Generate with AI
+                        </button>
+</div>
+</div>
+<!-- Deck Stats / Mini List -->
+<div class="bg-white dark:bg-surface-dark rounded-xl p-5 shadow-sm border border-slate-200 dark:border-none flex-1">
+<h3 class="text-slate-900 dark:text-white font-bold text-base mb-4">Cards in this Deck</h3>
+<div class="flex flex-col gap-2 overflow-y-auto max-h-[300px] pr-1">
+<!-- List Item -->
+<div class="p-3 rounded-lg bg-primary/10 border border-primary/20 flex justify-between items-center group cursor-pointer">
+<div class="flex flex-col gap-1 max-w-[80%]">
+<span class="text-xs font-bold text-primary uppercase">Current</span>
+<p class="text-sm text-slate-900 dark:text-white font-medium truncate">Function of Mitochondria?</p>
+</div>
+<span class="material-symbols-outlined text-primary text-sm">visibility</span>
+</div>
+<!-- List Item -->
+<div class="p-3 rounded-lg bg-slate-50 dark:bg-[#111a22] hover:bg-slate-100 dark:hover:bg-[#1c2733] transition-colors flex justify-between items-center group cursor-pointer">
+<div class="flex flex-col gap-1 max-w-[80%]">
+<span class="text-xs font-semibold text-text-secondary uppercase">Next</span>
+<p class="text-sm text-slate-700 dark:text-text-secondary font-medium truncate">Difference between RNA/DNA</p>
+</div>
+<span class="material-symbols-outlined text-text-secondary opacity-0 group-hover:opacity-100 text-sm">chevron_right</span>
+</div>
+<!-- List Item -->
+<div class="p-3 rounded-lg bg-slate-50 dark:bg-[#111a22] hover:bg-slate-100 dark:hover:bg-[#1c2733] transition-colors flex justify-between items-center group cursor-pointer">
+<div class="flex flex-col gap-1 max-w-[80%]">
+<span class="text-xs font-semibold text-emerald-500 uppercase">Mastered</span>
+<p class="text-sm text-slate-700 dark:text-text-secondary font-medium truncate">Phases of Mitosis</p>
+</div>
+<span class="material-symbols-outlined text-emerald-500 text-sm">check_circle</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Panel: Study Area -->
+<section class="lg:col-span-8 xl:col-span-9 flex flex-col gap-6 h-full">
+<!-- Toolbar & Progress -->
+<div class="flex flex-col gap-4">
+<div class="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-surface-dark p-3 rounded-xl border border-slate-200 dark:border-none shadow-sm">
+<div class="flex items-center gap-1">
+<button class="p-2 text-slate-500 dark:text-text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="Settings">
+<span class="material-symbols-outlined">tune</span>
+</button>
+<button class="p-2 text-slate-500 dark:text-text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="Edit Card">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="p-2 text-slate-500 dark:text-text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="Shuffle Deck">
+<span class="material-symbols-outlined">shuffle</span>
+</button>
+<div class="h-6 w-px bg-slate-200 dark:bg-[#233648] mx-1"></div>
+<button class="p-2 text-slate-500 dark:text-text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="Filter">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+<div class="flex items-center gap-3 flex-1 max-w-md ml-auto mr-4">
+<div class="flex flex-col w-full gap-1">
+<div class="flex justify-between text-xs font-medium">
+<span class="text-slate-500 dark:text-text-secondary">Progress</span>
+<span class="text-slate-900 dark:text-white">16/24</span>
+</div>
+<div class="h-2 w-full bg-slate-100 dark:bg-[#233648] rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 65%"></div>
+</div>
+</div>
+</div>
+<button class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-lg">add</span>
+<span class="hidden sm:inline">Add Card</span>
+</button>
+</div>
+</div>
+<!-- Main Flashcard Stage -->
+<div class="flex-1 flex flex-col items-center justify-center min-h-[400px] relative">
+<!-- The Card -->
+<div class="w-full max-w-3xl aspect-[16/9] md:aspect-[2/1] bg-white dark:bg-surface-dark rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] border border-slate-200 dark:border-slate-800 relative overflow-hidden flex flex-col">
+<!-- Card Header (Meta) -->
+<div class="px-8 py-6 flex justify-between items-start border-b border-slate-100 dark:border-[#233648]">
+<div class="flex gap-2">
+<span class="px-2 py-1 bg-slate-100 dark:bg-[#233648] text-slate-500 dark:text-text-secondary text-xs font-bold uppercase rounded tracking-wider">Biology</span>
+<span class="px-2 py-1 bg-slate-100 dark:bg-[#233648] text-slate-500 dark:text-text-secondary text-xs font-bold uppercase rounded tracking-wider">Cellular</span>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">bookmark_border</span>
+</button>
+</div>
+<!-- Card Content -->
+<div class="flex-1 flex flex-col items-center justify-center p-8 text-center gap-6 relative group/card">
+<!-- Question (Dimmed because Answer is revealed) -->
+<div class="transition-opacity duration-300 opacity-50 scale-95 blur-[1px]">
+<p class="text-lg md:text-xl font-medium text-slate-500 dark:text-text-secondary mb-2">Q: What is the function of the Mitochondria?</p>
+</div>
+<!-- Divider with Reveal Action icon -->
+<div class="w-12 h-1 bg-primary rounded-full my-2"></div>
+<!-- Answer (Highlighted) -->
+<div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
+<p class="text-2xl md:text-4xl font-bold text-slate-900 dark:text-white leading-tight">
+                                    "Powerhouse of the cell"
+                                </p>
+<p class="mt-4 text-lg text-slate-600 dark:text-[#92adc9] max-w-2xl mx-auto leading-relaxed">
+                                    Organelle that is the site of ATP (energy) production through cellular respiration.
+                                </p>
+</div>
+<!-- AI Helper Actions -->
+<div class="absolute bottom-4 right-4 flex gap-2 opacity-0 group-hover/card:opacity-100 transition-opacity">
+<button class="flex items-center gap-1 px-3 py-1.5 bg-slate-100 dark:bg-[#233648] hover:bg-slate-200 dark:hover:bg-[#324d67] rounded-full text-xs font-medium text-slate-600 dark:text-text-secondary transition-colors">
+<span class="material-symbols-outlined text-sm">psychology</span>
+                                    Explain like I'm 5
+                                </button>
+<button class="flex items-center gap-1 px-3 py-1.5 bg-slate-100 dark:bg-[#233648] hover:bg-slate-200 dark:hover:bg-[#324d67] rounded-full text-xs font-medium text-slate-600 dark:text-text-secondary transition-colors">
+<span class="material-symbols-outlined text-sm">lightbulb</span>
+                                    Mnemonic
+                                </button>
+</div>
+</div>
+<!-- Card Footer (Key Hints) -->
+<div class="h-1.5 w-full bg-slate-100 dark:bg-[#233648]">
+<div class="h-full bg-emerald-500 w-full" style="width: 100%"></div>
+<!-- This could be a timer bar or mastery indicator -->
+</div>
+</div>
+<!-- Keyboard hints -->
+<div class="mt-4 flex gap-6 text-xs text-slate-400 dark:text-[#5a718a] font-medium">
+<span class="flex items-center gap-1"><kbd class="bg-slate-200 dark:bg-[#233648] px-1.5 py-0.5 rounded text-slate-600 dark:text-text-secondary">Space</kbd> Flip</span>
+<span class="flex items-center gap-1"><kbd class="bg-slate-200 dark:bg-[#233648] px-1.5 py-0.5 rounded text-slate-600 dark:text-text-secondary">←</kbd> Previous</span>
+<span class="flex items-center gap-1"><kbd class="bg-slate-200 dark:bg-[#233648] px-1.5 py-0.5 rounded text-slate-600 dark:text-text-secondary">→</kbd> Next</span>
+<span class="flex items-center gap-1"><kbd class="bg-slate-200 dark:bg-[#233648] px-1.5 py-0.5 rounded text-slate-600 dark:text-text-secondary">1-4</kbd> Rate</span>
+</div>
+</div>
+<!-- Confidence Rating Controls -->
+<div class="grid grid-cols-4 gap-4 pb-2">
+<button class="h-14 flex flex-col items-center justify-center rounded-xl bg-slate-100 dark:bg-[#233648]/50 hover:bg-slate-200 dark:hover:bg-[#233648] border border-transparent hover:border-slate-300 dark:hover:border-slate-600 transition-all group">
+<span class="text-xs font-bold text-slate-500 dark:text-text-secondary uppercase mb-1">Again</span>
+<span class="text-sm font-semibold text-rose-500 group-hover:text-rose-400">&lt; 1m</span>
+</button>
+<button class="h-14 flex flex-col items-center justify-center rounded-xl bg-slate-100 dark:bg-[#233648]/50 hover:bg-slate-200 dark:hover:bg-[#233648] border border-transparent hover:border-slate-300 dark:hover:border-slate-600 transition-all group">
+<span class="text-xs font-bold text-slate-500 dark:text-text-secondary uppercase mb-1">Hard</span>
+<span class="text-sm font-semibold text-orange-500 group-hover:text-orange-400">2d</span>
+</button>
+<button class="h-14 flex flex-col items-center justify-center rounded-xl bg-slate-100 dark:bg-[#233648]/50 hover:bg-slate-200 dark:hover:bg-[#233648] border border-transparent hover:border-slate-300 dark:hover:border-slate-600 transition-all group">
+<span class="text-xs font-bold text-slate-500 dark:text-text-secondary uppercase mb-1">Good</span>
+<span class="text-sm font-semibold text-primary group-hover:text-blue-400">4d</span>
+</button>
+<button class="h-14 flex flex-col items-center justify-center rounded-xl bg-slate-100 dark:bg-[#233648]/50 hover:bg-slate-200 dark:hover:bg-[#233648] border border-transparent hover:border-slate-300 dark:hover:border-slate-600 transition-all group">
+<span class="text-xs font-bold text-slate-500 dark:text-text-secondary uppercase mb-1">Easy</span>
+<span class="text-sm font-semibold text-emerald-500 group-hover:text-emerald-400">7d</span>
+</button>
+</div>
+</section>
+</div>
+</main>
+</body></html>

@@ -87,7 +87,9 @@ def perform_ocr(file_bytes=None, file_path=None):
     Phase 1.3: Run OCR per page and merge.
     """
     if not HAS_OCR:
-        return "[Error: OCR dependencies missing on server]"
+        # Return None to indicate OCR is not possible, let caller decide (e.g. reject upload)
+        logger.warning("OCR requested but dependencies missing.")
+        return None
         
     text_output = ""
     try:

@@ -1,13 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import './GoogleCallback.css';
+import { 
+    Box, 
+    Container, 
+    Paper, 
+    Typography, 
+    CircularProgress, 
+    Button, 
+    useTheme,
+    alpha
+} from '@mui/material';
+import { 
+    CheckCircle as CheckCircleIcon, 
+    Error as ErrorIcon 
+} from '@mui/icons-material';
 
 export default function GoogleCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { fetchCurrentUser } = useAuth();
   const [status, setStatus] = useState('processing'); // processing, success, error
+  const theme = useTheme();
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -33,8 +47,8 @@ export default function GoogleCallback() {
           await fetchCurrentUser();
           setStatus('success');
           
-          // Redirect to upload page after 2 seconds
-          setTimeout(() => navigate('/upload'), 2000);
+          // Redirect to dashboard page after 2 seconds
+          setTimeout(() => navigate('/dashboard'), 2000);
         } else {
           setStatus('error');
           setTimeout(() => navigate('/login'), 3000);
@@ -50,48 +64,96 @@ export default function GoogleCallback() {
   }, [searchParams, navigate, fetchCurrentUser]);
 
   return (
-    <div className="google-callback-container">
-      <div className="callback-card">
-        {status === 'processing' && (
-          <>
-            <div className="spinner-container">
-              <div className="spinner"></div>
-            </div>
-            <h2>Connecting with Google...</h2>
-            <p>Please wait while we set up your account</p>
-          </>
-        )}
+    <Box sx={{ 
+        minHeight: '100vh', 
+        bgcolor: 'background.default', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: `radial-gradient(circle at 50% 50%, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${theme.palette.background.default} 70%)`
+    }}>
+      <Container maxWidth="xs">
+        <Paper 
+             elevation={24}
+             sx={{ 
+                 p: 5, 
+                 borderRadius: 4, 
+                 bgcolor: 'background.paper',
+                 border: '1px solid',
+                 borderColor: 'divider',
+                 textAlign: 'center',
+                 minHeight: 400,
+                 display: 'flex',
+                 flexDirection: 'column',
+                 alignItems: 'center',
+                 justifyContent: 'center'
+             }}
+        >
+            {status === 'processing' && (
+                <>
+                    <CircularProgress size={64} thickness={4} sx={{ mb: 4, color: 'primary.main' }} />
+                    <Typography variant="h5" fontWeight={700} gutterBottom>
+                        Finalizing Setup
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary">
+                        Please wait while we verify your credentials...
+                    </Typography>
+                </>
+            )}
 
-        {status === 'success' && (
-          <>
-            <div className="success-icon">
-              <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-                <circle cx="40" cy="40" r="40" fill="#10B981" fillOpacity="0.1"/>
-                <circle cx="40" cy="40" r="32" fill="#10B981"/>
-                <path d="M25 40L35 50L55 30" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <h2>Welcome to LearnFlow! 🎉</h2>
-            <p>Your account has been successfully connected</p>
-            <p className="redirect-text">Redirecting to dashboard...</p>
-          </>
-        )}
+            {status === 'success' && (
+                <>
+                    <Box sx={{ 
+                        mb: 4, 
+                        p: 2, 
+                        borderRadius: '50%', 
+                        bgcolor: alpha(theme.palette.success.main, 0.1),
+                        color: 'success.main',
+                        display: 'flex'
+                    }}>
+                        <CheckCircleIcon sx={{ fontSize: 64 }} />
+                    </Box>
+                    <Typography variant="h4" fontWeight={800} gutterBottom color="success.main">
+                        Success!
+                    </Typography>
+                    <Typography variant="h6" gutterBottom>
+                        Welcome to LearnFlow
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                        Redirecting you to the dashboard...
+                    </Typography>
+                </>
+            )}
 
-        {status === 'error' && (
-          <>
-            <div className="error-icon">
-              <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-                <circle cx="40" cy="40" r="40" fill="#EF4444" fillOpacity="0.1"/>
-                <circle cx="40" cy="40" r="32" fill="#EF4444"/>
-                <path d="M30 30L50 50M50 30L30 50" stroke="white" strokeWidth="4" strokeLinecap="round"/>
-              </svg>
-            </div>
-            <h2>Connection Failed</h2>
-            <p>There was a problem connecting with Google</p>
-            <p className="redirect-text">Redirecting to login...</p>
-          </>
-        )}
-      </div>
-    </div>
+            {status === 'error' && (
+                <>
+                    <Box sx={{ 
+                        mb: 4, 
+                        p: 2, 
+                        borderRadius: '50%', 
+                        bgcolor: alpha(theme.palette.error.main, 0.1),
+                        color: 'error.main',
+                        display: 'flex'
+                    }}>
+                        <ErrorIcon sx={{ fontSize: 64 }} />
+                    </Box>
+                    <Typography variant="h5" fontWeight={700} gutterBottom color="error.main">
+                        Connection Failed
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+                        We couldn't verify your Google account. Please try again.
+                    </Typography>
+                    <Button 
+                        variant="contained" 
+                        onClick={() => navigate('/login')}
+                        sx={{ borderRadius: 2 }}
+                    >
+                        Return to Login
+                    </Button>
+                </>
+            )}
+        </Paper>
+      </Container>
+    </Box>
   );
 }

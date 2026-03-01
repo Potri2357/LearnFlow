@@ -11,64 +11,125 @@ import {
   Tooltip,
   IconButton,
   CircularProgress,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
+  Chip,
   Stack,
 } from "@mui/material";
 import LectureSelect from "../components/LectureSelect";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import QuizIcon from "@mui/icons-material/Quiz";
 import ClearIcon from "@mui/icons-material/Clear";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 
 export default function QuizEntry() {
-  const [noteId, setNoteId] = useState("");
+  const { api: API } = useAuth();
+  const [selectedNoteIds, setSelectedNoteIds] = useState([]);
   const [numQuestions, setNumQuestions] = useState(10);
   const [loading, setLoading] = useState(false);
+  const [lectures, setLectures] = useState([]);
+  const [fetchingLectures, setFetchingLectures] = useState(true);
   const navigate = useNavigate();
 
+  // Fetch lectures on mount
+  React.useEffect(() => {
+    const fetchLectures = async () => {
+      try {
+        setFetchingLectures(true);
+        console.log('Fetching lectures...');
+        const response = await API.get('lectures/');
+        console.log('Lectures API response:', response);
+        console.log('Response data:', response.data);
+        
+        // Handle both array and object responses
+        const lectureData = Array.isArray(response.data) ? response.data : response.data.results || [];
+        console.log('Processed lecture data:', lectureData);
+        console.log('Number of lectures:', lectureData.length);
+        
+        setLectures(lectureData);
+      } catch (error) {
+        console.error('Failed to fetch lectures:', error);
+        console.error('Error details:', error.response);
+        setLectures([]);
+      } finally {
+        setFetchingLectures(false);
+      }
+    };
+    fetchLectures();
+  }, [API]);
+
+  const handleToggleLecture = (lectureId) => {
+    setSelectedNoteIds(prev => {
+      if (prev.includes(lectureId)) {
+        return prev.filter(id => id !== lectureId);
+      } else {
+        return [...prev, lectureId];
+      }
+    });
+  };
+
   const startQuiz = () => {
-    if (!noteId) return;
+    if (selectedNoteIds.length === 0) return;
     setLoading(true);
-    // Simulate a small delay or check if note exists (optional)
     setTimeout(() => {
       setLoading(false);
-      navigate(`/quiz?noteId=${noteId}&n=${numQuestions}`);
+      const noteIdsParam = selectedNoteIds.join(',');
+      navigate(`/quiz-mode?noteIds=${noteIdsParam}&n=${numQuestions}`);
     }, 500);
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 8, mb: 5 }}>
-      <Typography
-        variant="h3"
-        gutterBottom
-        align="center"
-        sx={{
-          fontWeight: "bold",
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          backgroundClip: "text",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          mb: 1,
-        }}
-      >
-        🚀 Ready to Quiz?
-      </Typography>
-      <Typography
-        variant="subtitle1"
-        align="center"
-        color="text.secondary"
-        sx={{ mb: 6 }}
-      >
-        Enter your lecture details to begin testing your knowledge.
-      </Typography>
+    <Container maxWidth="md" sx={{ mt: 5, mb: 5, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <Box sx={{ textAlign: 'center', mb: 6 }}>
+        <Typography
+            variant="overline"
+            sx={{ 
+                color: 'primary.main', 
+                fontWeight: 700, 
+                letterSpacing: 2,
+                mb: 1,
+                display: 'block'
+            }}
+        >
+            Practice Arena
+        </Typography>
+        <Typography
+            variant="h3"
+            gutterBottom
+            sx={{
+            fontWeight: 900,
+            letterSpacing: '-0.02em',
+            mb: 2,
+            background: "linear-gradient(135deg, #137fec 0%, #10b981 100%)",
+            backgroundClip: "text",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            }}
+        >
+            Test Your Knowledge
+        </Typography>
+        <Typography
+            variant="body1"
+            color="text.secondary"
+            sx={{ maxWidth: 600, mx: 'auto', fontSize: '1.1rem' }}
+        >
+            Challenge yourself with AI-generated quizzes based on your lecture notes.
+        </Typography>
+      </Box>
 
       <Card
         sx={{
           p: 4,
-          background: "linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)",
-          boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
+          width: '100%',
+          maxWidth: 600,
+          background: "background.paper", // Use theme background
+          boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
           borderRadius: 4,
-          border: "1px solid rgba(255,255,255,0.5)",
+          border: "1px solid",
+          borderColor: "divider",
         }}
       >
         <CardContent sx={{ p: 0 }}>
@@ -77,47 +138,88 @@ export default function QuizEntry() {
               <Typography
                 variant="subtitle2"
                 fontWeight="700"
-                color="#4a5568"
-                sx={{ mb: 1, ml: 1 }}
+                color="text.secondary"
+                sx={{ mb: 1.5, ml: 1, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}
               >
-                Lecture Note
+                Select Lectures ({selectedNoteIds.length} selected)
               </Typography>
-              <LectureSelect value={noteId} onChange={(v) => setNoteId(v)} />
+              <Box sx={{ 
+                maxHeight: 300, 
+                overflowY: 'auto', 
+                border: '1px solid', 
+                borderColor: 'divider',
+                borderRadius: 3,
+                p: 2
+              }}>
+                {fetchingLectures ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : lectures.length > 0 ? (
+                  <FormGroup>
+                    {lectures.map((lecture) => (
+                      <FormControlLabel
+                        key={lecture.id}
+                        control={
+                          <Checkbox
+                            checked={selectedNoteIds.includes(lecture.id)}
+                            onChange={() => handleToggleLecture(lecture.id)}
+                          />
+                        }
+                        label={lecture.title || `Lecture ${lecture.id}`}
+                        sx={{ mb: 1 }}
+                      />
+                    ))}
+                  </FormGroup>
+                ) : (
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+                    No lectures available. Please upload some lectures first.
+                  </Typography>
+                )}
+              </Box>
+              {selectedNoteIds.length > 0 && (
+                <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {selectedNoteIds.map(id => {
+                    const lecture = lectures.find(l => l.id === id);
+                    return (
+                      <Chip
+                        key={id}
+                        label={lecture?.title || `Lecture ${id}`}
+                        onDelete={() => handleToggleLecture(id)}
+                        color="primary"
+                        variant="outlined"
+                      />
+                    );
+                  })}
+                </Box>
+              )}
             </Box>
 
             <Box>
               <Typography
                 variant="subtitle2"
                 fontWeight="700"
-                color="#4a5568"
-                sx={{ mb: 1, ml: 1 }}
+                color="text.secondary"
+                sx={{ mb: 1.5, ml: 1, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}
               >
-                Number of Questions
+                Configuration
               </Typography>
               <TextField
                 type="number"
+                label="Number of Questions"
                 value={numQuestions}
                 onChange={(e) => setNumQuestions(e.target.value)}
                 fullWidth
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     height: "56px",
-                    background: "white",
-                    borderRadius: 2,
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                    transition: "all 0.3s ease",
-                    "&:hover": {
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                    },
-                    "&.Mui-focused": {
-                      boxShadow: "0 4px 12px rgba(102, 126, 234, 0.15)",
-                    },
+                    borderRadius: 3,
                   },
                 }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <QuizIcon sx={{ color: "#667eea" }} />
+                      <QuizIcon color="primary" />
                     </InputAdornment>
                   ),
                   inputProps: { min: 1, max: 50 },
@@ -128,8 +230,9 @@ export default function QuizEntry() {
             <Button
               variant="contained"
               fullWidth
+              size="large"
               onClick={startQuiz}
-              disabled={loading || !noteId || !numQuestions}
+              disabled={loading || selectedNoteIds.length === 0 || !numQuestions}
               endIcon={
                 loading ? (
                   <CircularProgress size={20} color="inherit" />
@@ -138,13 +241,15 @@ export default function QuizEntry() {
                 )
               }
               sx={{
-                height: "60px",
+                height: "56px",
                 fontSize: "1.1rem",
                 borderRadius: 3,
                 mt: 2,
+                fontWeight: 700,
+                boxShadow: '0 8px 20px -4px rgba(19, 127, 236, 0.4)'
               }}
             >
-              Start Quiz
+              Start Quiz Session
             </Button>
           </Stack>
         </CardContent>

@@ -1,408 +1,388 @@
 // SidebarLayout.jsx
 import React from "react";
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
   Drawer,
   List,
   ListItem,
   ListItemButton,
-  ListItemIcon,
   ListItemText,
-  Toolbar,
-  AppBar,
+  ListItemIcon,
   Typography,
-  IconButton,
-  Divider,
   Avatar,
+  IconButton,
+  AppBar,
+  Toolbar,
+  Container,
+  useTheme,
+  Tooltip,
+  Chip,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import UploadFileIcon from "@mui/icons-material/UploadFile";
-import QuizIcon from "@mui/icons-material/Quiz";
 import ArticleIcon from "@mui/icons-material/Article";
 import BarChartIcon from "@mui/icons-material/BarChart";
-import ListAltIcon from "@mui/icons-material/ListAlt";
 import AutoStoriesIcon from "@mui/icons-material/AutoStories";
 import StyleIcon from "@mui/icons-material/Style";
 import SummarizeIcon from "@mui/icons-material/Summarize";
 import SchoolIcon from "@mui/icons-material/School";
-import Notifications from "../components/Notifications";
+import PersonIcon from "@mui/icons-material/Person";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import SmartToyIcon from "@mui/icons-material/SmartToy";
+import GradingIcon from "@mui/icons-material/Grading";
+import TranslateIcon from "@mui/icons-material/Translate";
 import { useAuth } from "../context/AuthContext";
+import LogoutIcon from "@mui/icons-material/Logout";
+import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 
-// Generate avatar color based on username
+// Generate avatar color
 const getAvatarColor = (username) => {
-  if (!username) return '#667eea';
-  const colors = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#30cfd0', '#a8edea', '#ff9a56'];
+  if (!username) return '#2563EB';
+  const colors = ['#2563EB', '#1D4ED8', '#F59E0B', '#10B981', '#7C3AED'];
   const hash = username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return colors[hash % colors.length];
 };
 
-// Generate initials
 const getInitials = (user) => {
-  if (user?.first_name && user?.last_name) {
+  if (!user) return 'U';
+  if (user.first_name && user.last_name) {
     return `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`.toUpperCase();
   }
-  if (user?.username) {
-    const parts = user.username.split(/[\s_-]/);
-    if (parts.length > 1) {
-      return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
-    }
-    return user.username.substring(0, 2).toUpperCase();
-  }
-  return 'U';
+  return user.username ? user.username.substring(0, 2).toUpperCase() : 'U';
 };
 
-const drawerWidth = 280;
-const navItems = [
-  {
-    key: "upload",
-    label: "Upload Notes",
-    icon: <UploadFileIcon />,
-    to: "/upload",
-  },
-  {
-    key: "lectures",
-    label: "My Lectures",
-    icon: <AutoStoriesIcon />,
-    to: "/lectures",
-  },
-  {
-    key: "flashcards",
-    label: "Flashcards",
-    icon: <StyleIcon />,
-    to: "/flashcards",
-  },
-  {
-    key: "summarize",
-    label: "Summarize Lectures",
-    icon: <SummarizeIcon />,
-    to: "/summarize",
-  },
-  {
-    key: "exam-preparation",
-    label: "Exam Preparation",
-    icon: <SchoolIcon />,
-    to: "/exam-preparation",
-  },
-  {
-    key: "questions",
-    label: "Generate Questions",
-    icon: <ArticleIcon />,
-    to: "/questions",
-  },
-  { key: "quiz", label: "Quiz", icon: <QuizIcon />, to: "/quiz-entry" },
-  {
-    key: "weak",
-    label: "Weak Topics",
-    icon: <ListAltIcon />,
-    to: "/weak-topics",
-  },
-  {
-    key: "study",
-    label: "Study Plan",
-    icon: <BarChartIcon />,
-    to: "/study-plan",
-  },
+const LANGUAGES = [
+  { code: 'en', label: 'English', short: 'EN' },
+  { code: 'hi', label: 'हिंदी', short: 'हि' },
+  { code: 'ta', label: 'தமிழ்', short: 'த' },
+  { code: 'fr', label: 'Français', short: 'FR' },
 ];
 
+const LanguageSwitcher = () => {
+  const [anchorEl, setAnchorEl] = React.useState(null);
+  const [currentLang, setCurrentLang] = React.useState(i18n.language || 'en');
+  const open = Boolean(anchorEl);
+  const current = LANGUAGES.find(l => l.code === currentLang) || LANGUAGES[0];
+
+  const handleChange = (code) => {
+    i18n.changeLanguage(code);
+    localStorage.setItem('learnflow_lang', code);
+    setCurrentLang(code);
+    setAnchorEl(null);
+  };
+
+  return (
+    <>
+      <Tooltip title="Change language">
+        <Box
+          onClick={e => setAnchorEl(e.currentTarget)}
+          sx={{
+            display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer',
+            px: 1.5, py: 0.5, borderRadius: 2,
+            border: '1px solid', borderColor: 'divider',
+            '&:hover': { borderColor: 'primary.main', bgcolor: 'rgba(37,99,235,0.05)' },
+            transition: 'all 0.2s'
+          }}
+        >
+          <TranslateIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+          <Typography variant="caption" fontWeight={800} color="text.secondary" sx={{ fontSize: '0.78rem' }}>
+            {current.short}
+          </Typography>
+        </Box>
+      </Tooltip>
+      <Menu anchorEl={anchorEl} open={open} onClose={() => setAnchorEl(null)}
+        PaperProps={{ sx: { borderRadius: 2, mt: 1, minWidth: 140, border: '1px solid', borderColor: 'divider' } }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      >
+        {LANGUAGES.map(lang => (
+          <MenuItem key={lang.code} onClick={() => handleChange(lang.code)}
+            selected={lang.code === currentLang}
+            sx={{ borderRadius: 1, mx: 0.5, mb: 0.3, fontWeight: lang.code === currentLang ? 800 : 500 }}
+          >
+            <Typography variant="body2" fontWeight={lang.code === currentLang ? 800 : 500}>
+              {lang.label}
+            </Typography>
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
+  );
+};
+
+
 export default function SidebarLayout() {
-  const [mobileOpen, setMobileOpen] = React.useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const location = useLocation();
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const theme = useTheme();
+  const { user, logout } = useAuth();
+  const { t } = useTranslation();
+  const [open, setOpen] = React.useState(false);
+
+  const navItems = React.useMemo(() => [
+    { key: "dashboard",        label: t('nav_dashboard'),        icon: <BarChartIcon />,      to: "/dashboard" },
+    { key: "lectures",         label: t('nav_lectures'),         icon: <AutoStoriesIcon />,   to: "/lectures" },
+    { key: "questions",        label: t('nav_quiz'),             icon: <ArticleIcon />,       to: "/quiz" },
+    { key: "study-plan",       label: t('nav_study_plan'),       icon: <CalendarTodayIcon />, to: "/study-plan" },
+    { key: "exam-preparation", label: t('nav_exam_prep'),        icon: <SchoolIcon />,        to: "/exam-preparation" },
+    { key: "flashcards",       label: t('nav_flashcards'),       icon: <StyleIcon />,         to: "/flashcards" },
+    { key: "summarize",        label: t('nav_summarize'),        icon: <SummarizeIcon />,     to: "/summarize" },
+    { key: "concept-coach",    label: t('nav_concept_coach'),    icon: <SmartToyIcon />,      to: "/concept-coach", flagship: true },
+    { key: "rubric-evaluator", label: t('nav_rubric_evaluator'), icon: <GradingIcon />,       to: "/rubric-evaluator" },
+    { key: "profile",          label: t('nav_profile'),          icon: <PersonIcon />,        to: "/profile" },
+  ], [t]);
   
   const userInitials = getInitials(user);
   const avatarColor = getAvatarColor(user?.username);
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
+  const toggleDrawer = (newOpen) => () => {
+    setOpen(newOpen);
   };
 
-  const handleSidebarToggle = () => {
-    setIsSidebarOpen(!isSidebarOpen);
+  const handleLogout = () => {
+      logout();
+      navigate('/login');
   };
 
-  const drawer = (
-    <Box
-      sx={{
-        width: drawerWidth,
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-      }}
-    >
-      {/* Sidebar Header */}
-      <Toolbar sx={{ px: 2.5, py: 2.5 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <Avatar
-            sx={{
-              width: 40,
-              height: 40,
-              background: "transparent",
-              color: "#fff",
-              fontWeight: "bold",
-              border: "2px solid rgba(255,255,255,0.5)",
-            }}
-          >
-            L
-          </Avatar>
-          <Box>
-            <Typography
-              variant="h6"
-              sx={{ color: "#fff", fontWeight: 700, fontSize: "18px" }}
-            >
-              LearnFlow
-            </Typography>
-          </Box>
-        </Box>
-      </Toolbar>
-
-      <Divider sx={{ background: "rgba(255,255,255,0.2)" }} />
-
-      {/* Navigation List */}
-      <List sx={{ flex: 1, px: 1.5, py: 2 }}>
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.to;
-          return (
-            <ListItem key={item.key} disablePadding sx={{ mb: 1 }}>
-              <ListItemButton
-                component={Link}
-                to={item.to}
-                sx={{
-                  borderRadius: "10px",
-                  color: isActive ? "#fff" : "rgba(255,255,255,0.8)",
-                  background: isActive
-                    ? "rgba(255,255,255,0.25)"
-                    : "transparent",
-                  backdropFilter: isActive ? "blur(10px)" : "none",
-                  border: isActive ? "1px solid rgba(255,255,255,0.4)" : "none",
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  "&:hover": {
-                    background: "rgba(255,255,255,0.15)",
-                    backdropFilter: "blur(10px)",
-                  },
-                  py: 1.5,
-                }}
-              >
-                <ListItemIcon sx={{ color: "inherit", minWidth: 40 }}>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.label}
-                  sx={{
-                    "& .MuiTypography-root": {
-                      fontSize: "14px",
-                      fontWeight: isActive ? 600 : 500,
-                      letterSpacing: "0.3px",
-                    },
-                  }}
-                />
-              </ListItemButton>
-            </ListItem>
-          );
-        })}
-      </List>
-
-      {/* Footer */}
-      <Divider sx={{ background: "rgba(255,255,255,0.2)" }} />
-      <Box sx={{ p: 2.5, textAlign: "center" }}>
-        <Typography
-          variant="caption"
-          sx={{ color: "rgba(255,255,255,0.6)", display: "block" }}
+  const drawerContent = (
+    <Box sx={{ width: 300, height: '100%', display: 'flex', flexDirection: 'column', p: 3 }} role="presentation" onClick={toggleDrawer(false)}>
+      {/* Drawer Header */}
+      <Box 
+        component={Link} 
+        to="/dashboard" 
+        sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 6, px: 2, mt: 2, textDecoration: 'none' }}
+      >
+        <Box 
+          sx={{ 
+            width: 40, 
+            height: 40, 
+            background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', 
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontWeight: 800,
+            fontSize: '1.2rem',
+            boxShadow: '0 8px 16px rgba(37, 99, 235, 0.3)'
+          }} 
         >
-          © 2025 LearnFlow
+          LF
+        </Box>
+        <Typography variant="h5" sx={{ 
+            fontWeight: 800, 
+            background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
+            backgroundClip: "text",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            letterSpacing: '-0.5px'
+        }}>
+          LearnFlow
         </Typography>
       </Box>
+
+      <List sx={{ px: 1 }}>
+        {navItems.map((item) => {
+           const isActive = location.pathname === item.to;
+           return (
+            <React.Fragment key={item.key}>
+              {item.flagship && (
+                <Box sx={{ px: 2, pt: 2, pb: 0.5 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main', letterSpacing: '0.1em', fontSize: '0.65rem' }}>{t('nav_main_feature')}</Typography>
+                </Box>
+              )}
+              <ListItem disablePadding sx={{ mb: 1.5 }}>
+                <ListItemButton 
+                  component={Link} 
+                  to={item.to}
+                  sx={{ 
+                    borderRadius: '12px !important',
+                    py: item.flagship ? 1.8 : 1.5,
+                    px: 2.5,
+                    background: isActive 
+                      ? (theme.palette.mode === 'dark' ? 'rgba(37, 99, 235, 0.15)' : 'rgba(37, 99, 235, 0.1)')
+                      : item.flagship ? (theme.palette.mode === 'dark' ? 'rgba(37,99,235,0.08)' : 'rgba(37,99,235,0.05)') : 'transparent',
+                    color: isActive ? 'primary.main' : item.flagship ? 'primary.main' : 'text.secondary',
+                    borderLeft: isActive ? '4px solid' : item.flagship ? '4px solid' : '4px solid transparent',
+                    borderColor: isActive ? 'primary.main' : item.flagship ? 'rgba(37,99,235,0.4)' : 'transparent',
+                    transition: 'all 0.2s ease',
+                    '&:hover': { 
+                        bgcolor: isActive ? (theme.palette.mode === 'dark' ? 'rgba(37, 99, 235, 0.25)' : 'rgba(37, 99, 235, 0.2)') : 'rgba(255, 255, 255, 0.03)',
+                        transform: 'translateX(2px)'
+                    }
+                  }}
+                >
+                    <ListItemIcon sx={{ 
+                        minWidth: 40, 
+                        color: isActive ? 'primary.main' : item.flagship ? 'primary.main' : 'inherit',
+                        '& svg': { fontSize: 24 }
+                    }}>
+                        {item.icon}
+                    </ListItemIcon>
+                   <ListItemText 
+                      primary={item.label} 
+                      primaryTypographyProps={{ 
+                          fontWeight: isActive || item.flagship ? 700 : 500,
+                          fontSize: '0.95rem'
+                      }} 
+                   />
+                   {item.flagship && !isActive && (
+                     <Chip label="NEW" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 800, bgcolor: 'primary.main', color: 'white', borderRadius: 1 }} />
+                   )}
+                </ListItemButton>
+              </ListItem>
+            </React.Fragment>
+           );
+        })}
+
+      </List>
+      
+      <Box sx={{ flexGrow: 1 }} />
+      
+      {/* Logout Button */}
+      <Box sx={{ px: 2, mb: 2 }}>
+          <ListItemButton 
+            onClick={handleLogout}
+            sx={{ 
+              borderRadius: '12px !important',
+              py: 1.5,
+              px: 3,
+              color: 'text.secondary',
+              '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.1)', color: 'error.main' }
+            }}
+          >
+              <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
+                  <LogoutIcon />
+              </ListItemIcon>
+              <ListItemText primary={t('nav_logout')} primaryTypographyProps={{ fontWeight: 600 }} />
+          </ListItemButton>
+      </Box>
+
+      <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center', pb: 2, opacity: 0.6 }}>
+          v2.5 • © 2025 LearnFlow
+      </Typography>
     </Box>
   );
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
-      }}
-    >
-      {/* Top AppBar */}
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: isSidebarOpen ? `calc(100% - ${drawerWidth}px)` : "100%" },
-          ml: { sm: isSidebarOpen ? `${drawerWidth}px` : 0 },
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          color: "#fff",
-          boxShadow: "0 4px 20px rgba(102, 126, 234, 0.15)",
-          borderBottom: "none",
-          zIndex: 1200,
-          transition: theme => theme.transitions.create(['width', 'margin'], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen,
-          }),
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
+      
+      {/* Top Navigation Bar */}
+      <AppBar 
+        position="sticky" 
+        elevation={0}
+        sx={{ 
+            bgcolor: theme.palette.mode === 'dark' ? 'rgba(11, 15, 25, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+            backdropFilter: 'blur(16px)',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            color: 'text.primary',
         }}
       >
-        <Toolbar sx={{ justifyContent: "space-between" }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <IconButton
-              color="inherit"
-              edge="start"
-              onClick={() => {
-                // Check if mobile or desktop
-                if (window.innerWidth < 600) {
-                  handleDrawerToggle();
-                } else {
-                  handleSidebarToggle();
-                }
-              }}
-              sx={{
-                mr: 1,
-                "&:hover": { background: "rgba(255,255,255,0.1)" },
-              }}
-            >
-              <MenuIcon />
-            </IconButton>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 40,
-                  height: 40,
-                  borderRadius: "12px",
-                  background: "rgba(255,255,255,0.15)",
-                  backdropFilter: "blur(4px)",
-                }}
-              >
-                <AutoStoriesIcon sx={{ fontSize: 24, color: "#fff" }} />
-              </Box>
-              <Box>
-                <Typography
-                  variant="h6"
-                  sx={{ fontWeight: 700, fontSize: "20px", lineHeight: 1.1 }}
+        <Toolbar sx={{ justifyContent: 'space-between', height: 72 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <IconButton
+                    edge="start"
+                    color="inherit"
+                    aria-label="menu"
+                    onClick={toggleDrawer(true)}
+                    sx={{ 
+                        mr: 2,
+                        width: 44,
+                        height: 44,
+                        borderRadius: '12px',
+                        '&:hover': { bgcolor: 'rgba(37, 99, 235, 0.1)', color: 'primary.main' }
+                    }}
                 >
-                  LearnFlow
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: "rgba(255,255,255,0.8)",
-                    fontSize: "12px",
-                    display: "block",
-                    mt: 0.5,
-                  }}
+                    <MenuIcon />
+                </IconButton>
+                <Typography 
+                    variant="h5" 
+                    component={Link} 
+                    to="/dashboard"
+                    sx={{ 
+                        fontWeight: 800, 
+                        display: { xs: 'none', sm: 'block' }, 
+                        textDecoration: 'none', 
+                        background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
+                        backgroundClip: "text",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        letterSpacing: '-0.5px'
+                    }}
                 >
-                  Personalized Education Platform
+                    LearnFlow
                 </Typography>
-              </Box>
             </Box>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Notifications />
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <IconButton
-                component={Link}
-                to="/profile"
-                sx={{ color: "white", "&:hover": { background: "rgba(255,255,255,0.1)" }, p: 0.5 }}
-                title={user?.username || 'Profile'}
-              >
-                <Avatar sx={{ 
-                  width: 36, 
-                  height: 36, 
-                  bgcolor: avatarColor,
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  border: '2px solid rgba(255,255,255,0.3)'
-                }}>
-                  {userInitials}
-                </Avatar>
-              </IconButton>
-              <IconButton
-                onClick={() => {
-                  localStorage.removeItem('access_token');
-                  localStorage.removeItem('refresh_token');
-                  window.location.href = '/login';
-                }}
-                sx={{ color: "white", "&:hover": { background: "rgba(255,255,255,0.1)" } }}
-                title="Logout"
-              >
-                <Typography variant="body2" sx={{ fontSize: "14px" }}>Logout</Typography>
-              </IconButton>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                 <LanguageSwitcher />
+                 {/* User Profile in Navbar */}
+                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer', pl: 1, pr: 2, py: 0.5, borderRadius: '50px', border: '1px solid', borderColor: 'divider', '&:hover': { bgcolor: 'action.hover' } }}>
+                    <Avatar 
+                        src={user?.avatar_url}
+                        sx={{ 
+                            width: 38, 
+                            height: 38, 
+                            background: `linear-gradient(135deg, ${avatarColor} 0%, #172554 100%)`, 
+                            fontSize: '0.95rem', 
+                            fontWeight: 700,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                        }}
+                    >
+                        {userInitials}
+                    </Avatar>
+                    <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+                            {user?.first_name || user?.username || 'Student'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                            Student Account
+                        </Typography>
+                    </Box>
+                 </Box>
             </Box>
-          </Box>
         </Toolbar>
       </AppBar>
 
-      {/* Navigation Drawer */}
-      <Box
-        component="nav"
-        sx={{ width: { sm: isSidebarOpen ? drawerWidth : 0 }, flexShrink: { sm: 0 }, transition: 'width 0.3s' }}
-        aria-label="mailbox folders"
-      >
-        {/* Mobile Drawer */}
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{ keepMounted: true }}
-          sx={{
-            display: { xs: "block", sm: "none" },
-            "& .MuiDrawer-paper": {
-              width: drawerWidth,
-              boxSizing: "border-box",
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-
-        {/* Desktop Drawer */}
-        <Drawer
-          variant="persistent"
-          sx={{
-            display: { xs: "none", sm: "block" },
-            "& .MuiDrawer-paper": {
-              width: drawerWidth,
-              boxSizing: "border-box",
-              position: "fixed",
-              height: "100vh",
-              zIndex: 1100,
-              borderRight: "none",
-            },
-          }}
-          open={isSidebarOpen}
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-
-      {/* Main Content Area */}
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          width: { sm: `calc(100% - ${isSidebarOpen ? drawerWidth : 0}px)` },
-          ml: { sm: 0 }, // Margin left is handled by flex layout since drawer is persistent but in a flex container
-          minHeight: "100vh",
-          transition: theme => theme.transitions.create(['width', 'margin'], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen,
-          }),
+      {/* Drawer */}
+      <Drawer
+        anchor="left"
+        open={open}
+        onClose={toggleDrawer(false)}
+        PaperProps={{
+            sx: {
+                background: theme.palette.background.paper, 
+                // Using theme paper background which is now #151B2B in dark mode
+                width: 300,
+                borderRight: '1px solid',
+                borderColor: 'divider',
+            }
+        }}
+        ModalProps={{
+            keepMounted: true, 
         }}
       >
-        <Toolbar /> {/* Push content below AppBar */}
-        <Box
+        {drawerContent}
+      </Drawer>
+
+      {/* Main Content */}
+      <Box component="main" sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
+        <Container
+          maxWidth="lg"
           sx={{
-            p: 4,
-            background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
-            minHeight: "calc(100vh - 64px)",
+            flex: 1,
+            py: { xs: 3, md: 4 },
+            px: { xs: 2, sm: 3, md: 4 },
           }}
         >
           <Outlet />
-        </Box>
+        </Container>
       </Box>
     </Box>
   );
 }
+

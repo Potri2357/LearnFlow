@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Adaptive Quiz Interface</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;family=Noto+Sans:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "primary": "#137fec",
+                "background-light": "#f6f7f8",
+                "background-dark": "#101922",
+                "surface-dark": "#111a22",
+                "surface-light": "#233648",
+              },
+              fontFamily: {
+                "display": ["Lexend", "sans-serif"],
+                "body": ["Noto Sans", "sans-serif"]
+              },
+              borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+            },
+          },
+        }
+    </script>
+<style>::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #324d67; 
+        }
+        @keyframes fade-in-up {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fade-in-up {
+            animation: fade-in-up 0.5s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-[#111418] dark:text-white font-display overflow-hidden">
+<div class="relative flex h-screen w-full flex-col overflow-hidden">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#233648] bg-[#111a22] px-6 py-4 z-20">
+<div class="flex items-center gap-4 w-1/4">
+<button class="group flex items-center gap-2 text-[#92adc9] hover:text-white transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+<span class="text-sm font-bold tracking-[0.015em]">Exit Quiz</span>
+</button>
+</div>
+<div class="flex flex-col items-center justify-center w-1/2 max-w-[400px]">
+<div class="flex w-full justify-between items-end mb-2">
+<h2 class="text-white text-sm font-bold tracking-wide">Biology 101: Cellular Respiration</h2>
+<span class="text-[#92adc9] text-xs font-medium">Question 4 / 15</span>
+</div>
+<div class="w-full h-2 rounded-full bg-[#233648]">
+<div class="h-full rounded-full bg-primary transition-all duration-500 ease-out" style="width: 26%;"></div>
+</div>
+</div>
+<div class="flex items-center justify-end gap-6 w-1/4">
+<div class="flex items-center gap-4 bg-[#151f28] pl-5 pr-6 py-2.5 rounded-xl border border-primary/30 shadow-[0_4px_20px_-4px_rgba(19,127,236,0.3)]">
+<div class="flex items-center justify-center size-9 rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-[20px]">timer</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] text-[#92adc9] font-bold uppercase tracking-wider leading-tight">Time Left</span>
+<span class="text-white text-xl font-mono font-bold leading-none tracking-tight">14:32</span>
+</div>
+</div>
+<button class="text-[#92adc9] hover:text-white p-2 rounded-lg hover:bg-[#233648] transition-colors" title="Settings">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<aside class="hidden lg:flex flex-col w-80 border-r border-[#233648] bg-[#111a22] overflow-y-auto">
+<div class="flex flex-col p-6 gap-6">
+<div>
+<h3 class="text-[#92adc9] text-xs font-bold uppercase tracking-wider mb-4">Quiz Session</h3>
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-3 px-3 py-2 text-[#92adc9] opacity-60">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+<p class="text-sm font-medium line-through">1. Cell Structure</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-[#92adc9] opacity-60">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+<p class="text-sm font-medium line-through">2. Cell Membranes</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-[#92adc9] opacity-60">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+<p class="text-sm font-medium line-through">3. Cell Division</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-3 rounded-xl bg-[#233648] border border-primary/30 shadow-lg relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<span class="material-symbols-outlined text-primary text-[20px] filled">play_circle</span>
+<div class="flex flex-col">
+<p class="text-white text-sm font-bold">4. Cellular Respiration</p>
+<span class="text-[10px] text-primary uppercase font-bold tracking-wider mt-0.5">Current Question</span>
+</div>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-white/60">
+<span class="material-symbols-outlined text-[20px]">radio_button_unchecked</span>
+<p class="text-sm font-medium">5. Photosynthesis</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-white/60">
+<span class="material-symbols-outlined text-[20px]">radio_button_unchecked</span>
+<p class="text-sm font-medium">6. Genetics</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-white/60">
+<span class="material-symbols-outlined text-[20px]">radio_button_unchecked</span>
+<p class="text-sm font-medium">7. DNA Replication</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-white/60">
+<span class="material-symbols-outlined text-[20px]">radio_button_unchecked</span>
+<p class="text-sm font-medium">8. Protein Synthesis</p>
+</div>
+</div>
+</div>
+<div class="mt-auto pt-6 border-t border-[#233648]">
+<h3 class="text-[#92adc9] text-xs font-bold uppercase tracking-wider mb-3">AI Context</h3>
+<div class="bg-gradient-to-br from-[#137fec]/20 to-[#111a22] p-4 rounded-xl border border-[#137fec]/20">
+<div class="flex items-center gap-2 mb-2 text-primary">
+<span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+<span class="text-xs font-bold">Adaptive Adjustment</span>
+</div>
+<p class="text-xs text-[#92adc9] leading-relaxed">
+                                Based on your speed in the last section, we've increased the difficulty slightly to challenge your recall of molecular structures.
+                            </p>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col items-center justify-start overflow-y-auto bg-background-dark p-6 md:p-12 relative">
+<div class="absolute inset-0 opacity-5 pointer-events-none" style="background-image: radial-gradient(#233648 1px, transparent 1px); background-size: 32px 32px;"></div>
+<div class="w-full max-w-3xl z-10 flex flex-col gap-8 mb-20">
+<div class="flex flex-col gap-2 animate-fade-in-up">
+<span class="text-primary font-bold tracking-widest text-xs uppercase mb-2">Multiple Choice</span>
+<h1 class="text-white text-3xl md:text-4xl font-bold leading-tight tracking-tight">
+                            Which of the following molecules is the primary energy carrier in all living organisms?
+                        </h1>
+</div>
+<div class="flex flex-col gap-3">
+<button class="group flex items-center gap-4 p-4 rounded-xl bg-[#1c2834] border border-[#233648] hover:border-[#324d67] hover:bg-[#233648] transition-all text-left">
+<div class="flex items-center justify-center size-8 rounded-lg bg-[#111a22] text-[#92adc9] font-bold text-sm border border-[#233648] group-hover:border-[#92adc9] transition-colors">A</div>
+<span class="text-white text-lg font-medium">Glucose</span>
+</button>
+<button class="group relative flex items-center gap-4 p-4 rounded-xl bg-[#137fec]/10 border-2 border-primary transition-all text-left shadow-[0_0_20px_rgba(19,127,236,0.15)]">
+<div class="flex items-center justify-center size-8 rounded-lg bg-primary text-white font-bold text-sm shadow-sm">B</div>
+<span class="text-white text-lg font-medium">Adenosine Triphosphate (ATP)</span>
+</button>
+<button class="group flex items-center gap-4 p-4 rounded-xl bg-[#1c2834] border border-[#233648] hover:border-[#324d67] hover:bg-[#233648] transition-all text-left">
+<div class="flex items-center justify-center size-8 rounded-lg bg-[#111a22] text-[#92adc9] font-bold text-sm border border-[#233648] group-hover:border-[#92adc9] transition-colors">C</div>
+<span class="text-white text-lg font-medium">Deoxyribonucleic Acid (DNA)</span>
+</button>
+<button class="group flex items-center gap-4 p-4 rounded-xl bg-[#1c2834] border border-[#233648] hover:border-[#324d67] hover:bg-[#233648] transition-all text-left">
+<div class="flex items-center justify-center size-8 rounded-lg bg-[#111a22] text-[#92adc9] font-bold text-sm border border-[#233648] group-hover:border-[#92adc9] transition-colors">D</div>
+<span class="text-white text-lg font-medium">Lipids</span>
+</button>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-[#233648] mt-2">
+<button class="text-[#92adc9] hover:text-white text-sm font-medium flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-[#233648] transition-colors">
+<span class="material-symbols-outlined text-[18px]">flag</span>
+                            Report Issue
+                        </button>
+<div class="flex gap-3">
+<button class="bg-[#233648] hover:bg-[#324d67] text-white px-6 py-3 rounded-lg font-bold text-sm transition-colors">
+                                Skip
+                            </button>
+<button class="bg-primary hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-bold text-sm shadow-lg shadow-blue-900/20 flex items-center gap-2 transition-all transform hover:scale-[1.02]">
+                                Submit Answer
+                                <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+
+</body></html>

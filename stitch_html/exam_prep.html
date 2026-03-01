@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ExamPrep AI Dashboard</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;family=Noto+Sans:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922", // Matching the dark charcoal request
+                        "surface-dark": "#182430", // Slightly lighter for cards
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for better aesthetic in dark mode */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #137fec; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-x-hidden transition-colors duration-200">
+<!-- Top Navigation -->
+<header class="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-[#233648] bg-surface-light dark:bg-background-dark px-4 py-3 shadow-sm lg:px-10">
+<div class="flex items-center gap-4 lg:gap-8">
+<div class="flex items-center gap-3 text-primary dark:text-white">
+<span class="material-symbols-outlined text-3xl text-primary">school</span>
+<h2 class="hidden md:block text-slate-900 dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">ExamPrep AI</h2>
+</div>
+<!-- Search Bar -->
+<label class="hidden md:flex flex-col min-w-40 !h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full border border-slate-200 dark:border-[#233648] bg-slate-50 dark:bg-[#182430]">
+<div class="text-slate-400 dark:text-[#92adc9] flex items-center justify-center pl-4">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg bg-transparent border-none focus:outline-0 focus:ring-0 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#92adc9] px-3 text-sm font-normal leading-normal" placeholder="Search topics..." value=""/>
+</div>
+</label>
+</div>
+<div class="flex flex-1 justify-end gap-4 lg:gap-8">
+<!-- Navigation Links -->
+<div class="hidden lg:flex items-center gap-6">
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Dashboard</a>
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Materials</a>
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Strategy</a>
+</div>
+<div class="flex gap-3 items-center">
+<button class="flex items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary hover:bg-blue-600 text-white text-sm font-bold leading-normal tracking-[0.015em] transition-colors shadow-lg shadow-blue-500/20">
+<span class="mr-2 hidden sm:inline">Quick Generate</span>
+<span class="material-symbols-outlined text-[20px]">bolt</span>
+</button>
+<button class="relative flex items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-slate-100 dark:bg-[#233648] text-slate-600 dark:text-white hover:bg-slate-200 dark:hover:bg-[#2f455a] transition-colors">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500"></span>
+</button>
+<div class="bg-center bg-no-repeat bg-cover rounded-full h-10 w-10 border-2 border-slate-200 dark:border-[#233648]" data-alt="User profile avatar showing a smiling student" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD_XF-50_DIm0pwYMvmOsGgg0WOr1UhaE_D05B2pr7JAWTD2dgDZUaTLc-fiaR8SIC1IOiLgSviS_1w2ADtdm0WKy8-QyoWzB6iD_mknkhP0KcYr3CV1holO5xZb36Sv-Y4cN7bm7hU-0eGrcxcmVo1PEK1naWZTQeA_AM_uZPGEP_2Zpk_qRbXJAd7YfWseb-dGNZZs7lssHio4R4AE0zUyUzwctoe4m9jLbP7LnjPWMoFAhVujWAxlghUYZRV7M0dzeh6z84QJyE");'></div>
+</div>
+</div>
+</header>
+<div class="layout-container flex flex-col w-full max-w-[1400px] mx-auto px-4 md:px-8 lg:px-16 py-6 lg:py-10">
+<!-- Welcome & Hero Section -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
+<div class="flex flex-col gap-2">
+<h1 class="text-slate-900 dark:text-white text-3xl md:text-4xl font-black leading-tight tracking-[-0.033em]">
+                    Welcome back, Alex.
+                </h1>
+<p class="text-slate-500 dark:text-[#92adc9] text-base md:text-lg font-normal leading-normal max-w-2xl">
+                    You have <span class="text-primary font-bold">14 days</span> until your Calculus Final. Your study efficiency is up 12% this week.
+                </p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 dark:border-[#334b63] bg-surface-light dark:bg-[#182430] text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-[#233648] transition-colors font-medium text-sm">
+<span class="material-symbols-outlined text-[18px]">calendar_month</span>
+                    View Full Schedule
+                </button>
+</div>
+</div>
+<!-- Main Dashboard Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- LEFT COLUMN (Main Content) -->
+<div class="lg:col-span-8 flex flex-col gap-8">
+<!-- Stats Overview -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+<div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-[#182430] border border-slate-200 dark:border-none shadow-sm">
+<div class="flex items-center justify-between mb-2">
+<p class="text-slate-500 dark:text-[#92adc9] text-sm font-medium">Syllabus Coverage</p>
+<span class="material-symbols-outlined text-primary text-[20px]">pie_chart</span>
+</div>
+<p class="text-slate-900 dark:text-white text-3xl font-bold">42%</p>
+<p class="text-emerald-500 text-sm font-medium flex items-center mt-1">
+<span class="material-symbols-outlined text-[16px] mr-1">trending_up</span> +5% this week
+                        </p>
+<div class="w-full bg-slate-100 dark:bg-[#233648] h-1.5 rounded-full mt-3 overflow-hidden">
+<div class="bg-primary h-1.5 rounded-full" style="width: 42%"></div>
+</div>
+</div>
+<div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-[#182430] border border-slate-200 dark:border-none shadow-sm">
+<div class="flex items-center justify-between mb-2">
+<p class="text-slate-500 dark:text-[#92adc9] text-sm font-medium">Questions Solved</p>
+<span class="material-symbols-outlined text-purple-500 text-[20px]">quiz</span>
+</div>
+<p class="text-slate-900 dark:text-white text-3xl font-bold">1,205</p>
+<p class="text-emerald-500 text-sm font-medium flex items-center mt-1">
+<span class="material-symbols-outlined text-[16px] mr-1">trending_up</span> +150 today
+                        </p>
+<div class="w-full bg-slate-100 dark:bg-[#233648] h-1.5 rounded-full mt-3 overflow-hidden">
+<div class="bg-purple-500 h-1.5 rounded-full" style="width: 65%"></div>
+</div>
+</div>
+<div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-[#182430] border border-slate-200 dark:border-none shadow-sm">
+<div class="flex items-center justify-between mb-2">
+<p class="text-slate-500 dark:text-[#92adc9] text-sm font-medium">Avg. Accuracy</p>
+<span class="material-symbols-outlined text-orange-500 text-[20px]">target</span>
+</div>
+<p class="text-slate-900 dark:text-white text-3xl font-bold">88%</p>
+<p class="text-emerald-500 text-sm font-medium flex items-center mt-1">
+<span class="material-symbols-outlined text-[16px] mr-1">trending_up</span> +2% vs avg
+                        </p>
+<div class="w-full bg-slate-100 dark:bg-[#233648] h-1.5 rounded-full mt-3 overflow-hidden">
+<div class="bg-orange-500 h-1.5 rounded-full" style="width: 88%"></div>
+</div>
+</div>
+</div>
+<!-- AI Generator Tools -->
+<section>
+<h3 class="text-slate-900 dark:text-white text-lg font-bold mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">auto_awesome</span>
+                        AI Generator Tools
+                    </h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Exam Generator Card -->
+<div class="bg-white dark:bg-[#182430] rounded-xl p-6 border border-slate-200 dark:border-none shadow-sm flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div>
+<h4 class="text-slate-900 dark:text-white font-bold text-lg">Generate Question Paper</h4>
+<p class="text-slate-500 dark:text-[#92adc9] text-sm mt-1">Create a custom mock exam instantly.</p>
+</div>
+<div class="bg-primary/10 p-2 rounded-lg text-primary">
+<span class="material-symbols-outlined">description</span>
+</div>
+</div>
+<hr class="border-slate-100 dark:border-[#233648] my-1"/>
+<div class="space-y-4">
+<div>
+<label class="block text-xs font-semibold text-slate-500 dark:text-[#92adc9] uppercase mb-1.5">Subject</label>
+<select class="w-full bg-slate-50 dark:bg-[#233648] border-none rounded-lg text-slate-900 dark:text-white text-sm py-2.5 px-3 focus:ring-1 focus:ring-primary">
+<option>Calculus II - Integration</option>
+<option>Physics - Mechanics</option>
+<option>Chemistry - Organic</option>
+</select>
+</div>
+<div>
+<div class="flex justify-between mb-1.5">
+<label class="block text-xs font-semibold text-slate-500 dark:text-[#92adc9] uppercase">Difficulty Mix</label>
+<span class="text-xs text-primary font-medium">Adaptive</span>
+</div>
+<div class="flex gap-1 h-2 rounded-full overflow-hidden w-full bg-slate-100 dark:bg-[#233648]">
+<div class="bg-emerald-500 w-[30%]" title="Easy"></div>
+<div class="bg-yellow-500 w-[50%]" title="Medium"></div>
+<div class="bg-red-500 w-[20%]" title="Hard"></div>
+</div>
+<div class="flex justify-between text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+<span>Easy (30%)</span>
+<span>Med (50%)</span>
+<span>Hard (20%)</span>
+</div>
+</div>
+</div>
+<button class="mt-auto w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]">print</span>
+                                Generate Paper
+                            </button>
+</div>
+<!-- Strategy Planner Card -->
+<div class="bg-white dark:bg-[#182430] rounded-xl p-6 border border-slate-200 dark:border-none shadow-sm flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div>
+<h4 class="text-slate-900 dark:text-white font-bold text-lg">Update Study Strategy</h4>
+<p class="text-slate-500 dark:text-[#92adc9] text-sm mt-1">Re-calculate your roadmap based on time left.</p>
+</div>
+<div class="bg-purple-500/10 p-2 rounded-lg text-purple-500">
+<span class="material-symbols-outlined">timeline</span>
+</div>
+</div>
+<hr class="border-slate-100 dark:border-[#233648] my-1"/>
+<div class="space-y-4">
+<div>
+<label class="block text-xs font-semibold text-slate-500 dark:text-[#92adc9] uppercase mb-1.5">Hours Available / Day</label>
+<div class="flex items-center gap-3">
+<button class="h-10 w-10 rounded-lg bg-slate-100 dark:bg-[#233648] text-slate-600 dark:text-white flex items-center justify-center hover:bg-slate-200 dark:hover:bg-[#2f455a] transition-colors"><span class="material-symbols-outlined">remove</span></button>
+<span class="text-xl font-bold text-slate-900 dark:text-white">4.5 hrs</span>
+<button class="h-10 w-10 rounded-lg bg-slate-100 dark:bg-[#233648] text-slate-600 dark:text-white flex items-center justify-center hover:bg-slate-200 dark:hover:bg-[#2f455a] transition-colors"><span class="material-symbols-outlined">add</span></button>
+</div>
+</div>
+<div class="bg-slate-50 dark:bg-[#233648] p-3 rounded-lg flex gap-3 items-start">
+<span class="material-symbols-outlined text-yellow-500 text-[20px] mt-0.5">lightbulb</span>
+<p class="text-xs text-slate-600 dark:text-slate-300">
+                                        Tip: You are falling behind on <strong>Derivatives</strong>. We recommend increasing focus time by 30 mins.
+                                    </p>
+</div>
+</div>
+<button class="mt-auto w-full bg-slate-900 dark:bg-white hover:bg-slate-700 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]">refresh</span>
+                                Recalculate Plan
+                            </button>
+</div>
+</div>
+</section>
+<!-- Source Materials -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-slate-900 dark:text-white text-lg font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">folder_open</span>
+                            Source Materials
+                        </h3>
+<button class="text-primary text-sm font-bold hover:underline">View All Library</button>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+<!-- Upload Card 1 -->
+<div class="group relative aspect-video cursor-pointer overflow-hidden rounded-xl bg-[#233648]">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105 opacity-50" data-alt="Abstract blue digital pattern representing data" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB-UrB9BUtGQht9MDg4Klw4hsbCQVaTxJqY--jr1l74ewF3-4hg5xnd7i4L7xRt16KYuLFLk3lhENM6icEcJl1xhgdHuDWAtkr_MRXaUPlnvnvMsaxw9U2sSn_yMllU5VmIpbFR_nDfCPDecxCVssi_o_y1KRnKs4dzQ3RkOMWUrtDh6toTAIpwL4b-yUvaUkRn1OH9DB27KARjowe5r1N_EzcooNcUzE89XRAwj887_hTMjRpERK9ZNCf4O25US5SfQkEAfrchsZs");'></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+<div class="relative flex h-full flex-col justify-end p-5">
+<div class="mb-auto flex justify-end">
+<div class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm transition-colors group-hover:bg-primary">
+<span class="material-symbols-outlined text-white text-[18px]">upload</span>
+</div>
+</div>
+<h4 class="text-white text-lg font-bold leading-tight">Upload Syllabus</h4>
+<p class="text-slate-300 text-xs mt-1">PDF, DOCX supported</p>
+</div>
+</div>
+<!-- Upload Card 2 -->
+<div class="group relative aspect-video cursor-pointer overflow-hidden rounded-xl bg-[#233648]">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105 opacity-50" data-alt="Close up of exam papers stacked" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCCEExKakElLLS_uiIlEOmHzoh3OH1mDsL1hQcswSJlsYfFdk6zNtzi05QnT3MW-nVeChCGp8kIoBQ3muAApsz_KXHC71mjHip4_7QkQ3QXxajF0q-vlWMnR9E3hPUJBUZ1V9iZAxLgP8cO-89WKRPd5CdrA7baIoGeKhsnULhV2cRnUjWdQoUfnjrAlEuSFqm_BmQTw__Q0m53AXU1w0m858MXpyMJnYYHjMsZNGw4go0uFT_NhUr3e3rZptwz8SBrN9sXBzPVjhY");'></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+<div class="relative flex h-full flex-col justify-end p-5">
+<div class="mb-auto flex justify-end">
+<div class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm transition-colors group-hover:bg-primary">
+<span class="material-symbols-outlined text-white text-[18px]">upload</span>
+</div>
+</div>
+<h4 class="text-white text-lg font-bold leading-tight">Upload Past Papers</h4>
+<p class="text-slate-300 text-xs mt-1">AI will parse questions</p>
+</div>
+</div>
+<!-- Existing File Card -->
+<div class="group relative aspect-video cursor-pointer overflow-hidden rounded-xl bg-[#233648] border-2 border-dashed border-slate-600 hover:border-primary transition-colors flex flex-col items-center justify-center text-center p-4">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary text-4xl mb-2 transition-colors">add_circle</span>
+<p class="text-slate-300 text-sm font-medium">Add Other Resources</p>
+<p class="text-slate-500 text-xs mt-1">Notes, Books, Links</p>
+</div>
+</div>
+</section>
+</div>
+<!-- RIGHT COLUMN (Sidebar) -->
+<div class="lg:col-span-4 flex flex-col gap-8">
+<!-- Study Timeline Widget -->
+<div class="bg-white dark:bg-[#182430] rounded-xl p-6 border border-slate-200 dark:border-none shadow-sm h-fit">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-slate-900 dark:text-white text-lg font-bold">Study Timeline</h3>
+<button class="text-primary text-xs font-bold uppercase hover:underline">View Calendar</button>
+</div>
+<div class="relative pl-4 border-l-2 border-slate-100 dark:border-[#233648] space-y-8">
+<!-- Item 1 (Active) -->
+<div class="relative">
+<div class="absolute -left-[21px] top-1 h-3 w-3 rounded-full bg-primary ring-4 ring-white dark:ring-[#182430]"></div>
+<p class="text-xs font-bold text-primary uppercase mb-1">Today, 2:00 PM</p>
+<h4 class="text-slate-900 dark:text-white font-medium text-sm">Integration by Parts - Quiz</h4>
+<p class="text-slate-500 dark:text-[#92adc9] text-xs mt-1">15 Questions • Medium Difficulty</p>
+<button class="mt-2 text-xs bg-primary/10 text-primary px-3 py-1.5 rounded font-bold hover:bg-primary hover:text-white transition-colors">Start Now</button>
+</div>
+<!-- Item 2 -->
+<div class="relative">
+<div class="absolute -left-[21px] top-1 h-3 w-3 rounded-full bg-slate-300 dark:bg-slate-600 ring-4 ring-white dark:ring-[#182430]"></div>
+<p class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Tomorrow, 10:00 AM</p>
+<h4 class="text-slate-900 dark:text-white font-medium text-sm">Review: Past Paper 2022</h4>
+<p class="text-slate-500 dark:text-[#92adc9] text-xs mt-1">Focus on Section B errors</p>
+</div>
+<!-- Item 3 -->
+<div class="relative">
+<div class="absolute -left-[21px] top-1 h-3 w-3 rounded-full bg-slate-300 dark:bg-slate-600 ring-4 ring-white dark:ring-[#182430]"></div>
+<p class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Oct 24, 4:00 PM</p>
+<h4 class="text-slate-900 dark:text-white font-medium text-sm">Vector Calculus Deep Dive</h4>
+<p class="text-slate-500 dark:text-[#92adc9] text-xs mt-1">Watch recommended lectures</p>
+</div>
+</div>
+</div>
+<!-- Recent Activity List -->
+<div class="bg-white dark:bg-[#182430] rounded-xl p-6 border border-slate-200 dark:border-none shadow-sm h-fit">
+<h3 class="text-slate-900 dark:text-white text-lg font-bold mb-4">Recent Activity</h3>
+<div class="flex flex-col gap-4">
+<a class="flex items-center gap-3 group" href="#">
+<div class="h-10 w-10 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-slate-900 dark:text-white text-sm font-medium truncate group-hover:text-primary transition-colors">Completed Math Mock #4</p>
+<p class="text-slate-500 dark:text-[#92adc9] text-xs">Score: 88/100 • 2h ago</p>
+</div>
+</a>
+<a class="flex items-center gap-3 group" href="#">
+<div class="h-10 w-10 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">upload_file</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-slate-900 dark:text-white text-sm font-medium truncate group-hover:text-primary transition-colors">Uploaded Physics 2023.pdf</p>
+<p class="text-slate-500 dark:text-[#92adc9] text-xs">Processing complete • 5h ago</p>
+</div>
+</a>
+<a class="flex items-center gap-3 group" href="#">
+<div class="h-10 w-10 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">warning</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-slate-900 dark:text-white text-sm font-medium truncate group-hover:text-primary transition-colors">Strategy Alert</p>
+<p class="text-slate-500 dark:text-[#92adc9] text-xs">Chemistry prep lagging behind</p>
+</div>
+</a>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>

@@ -1,124 +1,157 @@
 # LearnFlow 📚
 
-**LearnFlow** is an AI-powered adaptive learning platform that helps students master their subjects through intelligent question generation, personalized study plans, and exam preparation tools.
+> **An adaptive, intelligence-driven learning platform** — built for students who want to study smarter, prepare for exams with confidence, and get personalized guidance from a cognitive tutor that teaches, not just answers.
 
-## 🌟 Key Features
+---
 
-### 1. **AI-Powered Question Generation**
-- Upload lecture notes (text or PDF) and automatically generate high-quality MCQ questions
-- Questions include difficulty levels (0.2-0.9), explanations, and topic tagging
-- Powered by Google's Gemini 2.0 Flash AI model
+## 🌟 Feature Overview
 
-### 2. **Adaptive Learning System**
-- **Topic Mastery Tracking**: ML-based algorithm tracks mastery levels (0-1 scale) for each topic
-- **Weakness Detection**: Identifies weak topics based on answer correctness and time taken
-- **Adaptive Question Selection**: Selects questions based on:
-  - User's weak topics (50% of questions)
-  - Target difficulty matching user's accuracy
+| Feature | Description |
+|---|---|
+| 🤖 **Concept Coach** | Interactive step-by-step cognitive tutor — Socratic guided learning |
+| 📝 **Rubric Evaluator** | Upload assignments and get detailed rubric-based intelligent feedback |
+| 📖 **Exam Preparation** | Syllabus upload, previous paper analysis, question bank generation |
+| 📅 **AI Strategy Roadmap** | Day-by-day exam study schedule tailored to your syllabus |
+| 🧠 **Adaptive Quizzes** | ML-powered quiz engine that targets your weak areas |
+| 🗂️ **Flashcard Generator** | AI-generated flashcards from your lecture notes |
+| 📄 **Lecture Summarizer** | Automatically summarizes lengthy lecture PDFs |
+| 📊 **Study Plan** | Long-term AI study plans based on your weaknesses |
+| 📈 **Analytics Dashboard** | Real-time mastery tracking, streaks, and performance metrics |
+| 🔐 **Auth System** | JWT + Google OAuth 2.0 |
+
+---
+
+## 🚀 Core Features
+
+### 1. 🤖 Concept Coach AI *(Flagship Feature)*
+
+An interactive AI tutor modelled after the **Socratic method** — it never just gives you the answer. Instead it:
+
+- Guides you step-by-step with targeted **hints**, **formulas**, and **guided questions**
+- Teaches like a real teacher: confirms understanding before moving on
+- Renders rich responses: **bold**, `code`, numbered steps, formula boxes, markdown headings
+- **Quick action chips**: "Give me a hint", "Show the formula", "Explain differently", "I got it, next step"
+- Full **Gemini-style chat UI** with typing indicator, copy, thumbs up/down, and a new-chat button
+- Powered by a **Socratic system prompt** via Gemini AI on the backend
+
+### 2. 📝 AI Rubric Evaluator
+
+Upload any assignment (PDF, DOCX, TXT) for intelligent rubric-based feedback:
+
+- **Overall Score** with colour-coded rating
+- **Content Accuracy** and **Clarity & Logic** sub-scores with progress bars
+- **Originality Check** with a circular gauge
+- **Top Strengths** and **Actionable Suggestions** from AI
+- Clean dark AI feedback panel with export option
+
+### 3. 📖 Exam Preparation — Question Bank Generator
+
+- Upload syllabus (PDF or text) and previous question papers **independently**
+- Questions only generate when you explicitly click **"Generate Questions"** — no premature generation
+- **Configure mark distribution**: set how many questions per mark tier (e.g., 2-mark × 5, 5-mark × 3, 10-mark × 2)
+- AI analyses syllabus deeply and generates detailed answers calibrated to each mark value
+- Filter questions by **All / Frequent / Long Answer**
+- **Bookmark** questions and toggle "Secure Centum Mode" for comprehensive coverage
+- High-Yield Pattern badges on questions derived from previous paper analysis
+
+### 4. 📅 AI Strategy Roadmap *(Exam-Focused)*
+
+- Input your **exam date** and **daily available hours**
+- AI generates a day-by-day study schedule in a clean **inline table format**
+- Shows total days, study hours, and topics covered in a summary bar
+- Priorities are automatically derived from syllabus + previous paper patterns
+- This is distinct from the **Study Plan** (which is for long-term learning)
+
+### 5. 🧠 Adaptive Quiz Engine
+
+- Generates MCQs from uploaded lecture notes using Gemini AI
+- Tracks topic mastery (0.0–1.0) and weakness scores per topic
+- Adaptive question selection:
+  - 50% from identified weak topics
+  - 50% matching your current accuracy-based difficulty
   - Avoids recently answered questions
+- Detailed results with time-taken, correct/incorrect breakdown, and explanations
 
-### 3. **Intelligent Analytics**
-- Real-time progress tracking (accuracy, total questions, correct answers)
-- Topic-wise weakness scores with time-based analysis
-- User streaks (global and per-topic)
+### 6. 📊 Study Plan *(Long-Term Preparation)*
+
+- AI-generated plans based on identified weak topics and learning history
+- Includes recommended resources, revision schedules, and practice prompts
+- Clearly differentiated from the Exam Strategy Roadmap
+
+### 7. 🗂️ Flashcard Generator
+
+- Auto-generate flashcards from lecture notes
+- Flip-to-reveal interaction, bookmark support, spaced-repetition ready
+
+### 8. 📄 Lecture Summarizer & Notes
+
+- Upload PDF or text lecture notes
+- AI-generated summaries with key concepts extracted
+- Smart OCR pipeline for scanned PDFs (Tesseract + Poppler)
+- Windows Explorer-style PDF preview panel
+
+### 9. 📈 Analytics Dashboard
+
+- Real-time accuracy, total questions, correct answers
+- Per-topic weakness scores with mastery progression
 - Quiz attempt history with performance metrics
-
-### 4. **Personalized Study Plans**
-- AI-generated study plans based on:
-  - Identified weak topics
-  - User's learning history
-  - Recommended resources (articles, videos, explanations)
-  - Practice and revision schedules
-
-### 5. **Exam Preparation Module**
-- **Syllabus Upload**: Upload exam syllabi (text or PDF)
-- **Previous Paper Analysis**: Upload previous question papers for pattern recognition
-- **AI Question Generation**: Generate exam questions with:
-  - Custom mark distribution (e.g., 2 marks: 5 questions, 5 marks: 3 questions)
-  - Priority-based ordering (most important topics first)
-  - Pattern-based questions from previous papers
-  - "Secure Centum Mode" for comprehensive coverage
-- **Exam Strategy Generator**: Creates day-by-day study schedules based on:
-  - Days remaining until exam
-  - Hours available per day
-  - Prioritized topics from pattern analysis
-
-### 6. **Flashcard Generation**
-- Generate flashcards from lecture notes for quick revision
-- AI-powered content summarization
-
-### 7. **Lecture Summarization**
-- Automatically summarize lengthy lecture notes
-- Extract key concepts and important points
-
-### 8. **User Authentication**
-- JWT-based authentication with access and refresh tokens
-- Google OAuth 2.0 integration for social login
-- User profile management with avatars and bio
-
-### 9. **Notification System**
-- Real-time notifications for:
-  - Question generation completion
-  - Quiz completion with performance feedback
-  - Study milestones and achievements
-- Mark as read/unread functionality
-- Bulk notification management
-
-### 10. **Badge System**
-### 11. **Smart OCR & Noise Reduction**
-- Automatically detects "Scanned" vs "Digital" PDFs
-- advanced "Exam-Ready" noise filter removes:
-  - Headers, Footers, Page numbers
-  - Conversational filler & decorative text
-  - Hyphenated line breaks
-- Uses Tesseract OCR for image-based documents
-
-### 12. **Deep Dive Video Explainers**
-- Generate "Podcast-style" video scripts with two distinct speakers (Host & Expert)
-- Parallel asset generation for near-zero latency
-- Cinematic slides with glassmorphism overlays and AI-generated imagery
-
-### 13. **Latency-Optimized Architecture**
-- **Interactive Features** (Quiz, Planner): Powered by Mistral 7B (~3s latency)
-- **Creative Features** (Video, Flashcards): Powered by Llama 3 70B (High Intelligence)
+- User streaks (global and per-topic)
 
 ---
 
 ## 🏗️ Technology Stack
 
 ### Backend
-- **Framework**: Django 5.2.8
-- **API**: Django REST Framework with JWT authentication
-- **Database**: SQLite (development) - easily switchable to PostgreSQL/MySQL
-- **AI Integration**: Hybrid Engine (Google Gemini 2.0 Flash + Mistral 7B + Llama 3)
-- **PDF Processing**: Hybrid OCR Pipeline (Tesseract + Poppler + pdfplumber)
-- **Authentication**: 
-  - `rest_framework_simplejwt` for JWT tokens
-  - `django-allauth` for Google OAuth
+| Layer | Technology |
+|---|---|
+| Framework | Django 5.x + Django REST Framework |
+| Auth | `rest_framework_simplejwt` (JWT) + `django-allauth` (Google OAuth) |
+| Database | SQLite (dev) — easily switchable to PostgreSQL |
+| AI Engine | **Google Gemini 2.0 Flash** via `google-generativeai` |
+| PDF Processing | Hybrid pipeline: `pdfplumber` + Tesseract OCR + Poppler |
+| File Storage | Django media files |
 
 ### Frontend
-- **Framework**: React 19.2.0
-- **UI Library**: Material-UI (MUI) 7.3.5
-- **Styling**: TailwindCSS 4.1.17 + Emotion
-- **Routing**: React Router DOM 7.9.6
-- **HTTP Client**: Axios 1.13.2
-- **Animations**: Framer Motion 12.23.24
-- **Charts**: Recharts 3.4.1
-- **Markdown Rendering**: react-markdown 10.1.0
-- **Diagrams**: Mermaid 11.12.1
-- **File Upload**: react-dropzone 14.3.8
+| Layer | Technology |
+|---|---|
+| Framework | React 19 |
+| UI Library | Material-UI (MUI) v7 |
+| Routing | React Router DOM v7 |
+| HTTP Client | Axios |
+| File Upload | react-dropzone |
+| Charts | Recharts |
+| Animations | Framer Motion |
+| Design System | Glassmorphism dark theme with gradient accents |
+
+---
+
+## 🗂️ App Navigation
+
+The sidebar contains all main sections, with **Concept Coach AI** highlighted as the flagship feature:
+
+```
+📊  Dashboard
+📖  Lecture Notes
+❓  Practice Arena (Quiz)
+📅  Study Plan
+🎓  Exam Prep
+🗃️  Flashcards
+📄  Summarize Lecture
+✦  Concept Coach AI       ← MAIN FEATURE
+📋  Rubric Evaluator
+👤  Profile
+```
 
 ---
 
 ## 📋 Prerequisites
 
-- **Python**: 3.8 or higher
-- **Node.js**: 14.x or higher
-- **npm**: 6.x or higher
-- **Tesseract-OCR**: v5.0+ (Required for Scanned PDFs)
-- **Poppler**: (Required for PDF-to-Image conversion)
-- **Google Gemini API Key**: [Get it here](https://makersuite.google.com/app/apikey)
-- **Google OAuth Credentials** (optional): For social login
+- **Python** 3.8+
+- **Node.js** 16+, **npm** 8+
+- **Tesseract-OCR** v5.0+ *(for scanned PDFs)*
+- **Poppler** *(for PDF-to-image conversion)*
+- **Google Gemini API Key** — [Get one here](https://makersuite.google.com/app/apikey)
+- **Google OAuth Credentials** *(optional)* — for Google social login
 
 ---
 
@@ -132,74 +165,52 @@ cd LearnFlow
 
 ### 2. Backend Setup
 
-#### Create Virtual Environment
 ```bash
+# Create and activate virtual environment
 python -m venv venv
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # macOS/Linux
 
-# Windows
-venv\Scripts\activate
+# Install dependencies
+pip install -r requirements.txt
 
-# macOS/Linux
-source venv/bin/activate
-```
+# Configure environment
+cp .env.example .env
+# → Edit .env and set GEMINI_API_KEY=your_key_here
 
-#### Install Dependencies
-```bash
-pip install django djangorestframework django-cors-headers djangorestframework-simplejwt google-generativeai pdfplumber python-dotenv django-allauth
-```
-
-#### Configure Environment Variables
-Create a `.env` file in the root directory:
-```env
-GEMINI_API_KEY=your_gemini_api_key_here
-```
-
-#### Run Migrations
-```bash
+# Run migrations
 python manage.py makemigrations
 python manage.py migrate
-```
 
-#### Create Superuser
-```bash
+# Create admin superuser
 python manage.py createsuperuser
-```
 
-#### Start Backend Server
-```bash
+# Start server
 python manage.py runserver
+# → Running at http://localhost:8000
 ```
-Backend will run at `http://localhost:8000`
 
 ### 3. Frontend Setup
 
-#### Navigate to Frontend Directory
 ```bash
 cd frontend
-```
 
-#### Install Dependencies
-```bash
 npm install
-```
 
-#### Start Frontend Server
-```bash
 npm start
+# → Running at http://localhost:3000
 ```
-Frontend will run at `http://localhost:3000`
 
 ---
 
-## 🔐 Google OAuth Setup (Optional)
+## 🔐 Google OAuth Setup *(Optional)*
 
-Follow the detailed guide in [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md)
+See [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md) for the full guide.
 
 **Quick Steps:**
 1. Create OAuth credentials in [Google Cloud Console](https://console.cloud.google.com/)
 2. Add redirect URI: `http://localhost:8000/accounts/google/login/callback/`
-3. Configure in Django Admin (`/admin`) under **Social applications**
-4. Add Client ID and Secret
+3. Configure in Django Admin (`/admin`) under **Social Applications**
 
 ---
 
@@ -209,7 +220,7 @@ Follow the detailed guide in [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/auth/register/` | Register new user |
-| POST | `/api/auth/login/` | Login (returns JWT tokens) |
+| POST | `/api/auth/login/` | Login — returns JWT tokens |
 | POST | `/api/auth/refresh/` | Refresh access token |
 | GET | `/api/auth/me/` | Get current user details |
 | GET | `/accounts/google/login/` | Google OAuth login |
@@ -218,22 +229,19 @@ Follow the detailed guide in [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/upload-note/` | Upload lecture note (text/PDF) |
+| POST | `/api/upload-pdf/` | Upload PDF with OCR support |
 | GET | `/api/lectures/` | List all lecture notes |
 | GET | `/api/lectures/{id}/` | Get specific lecture note |
-| GET | `/api/note-details/{note_id}/` | Get note details |
-| POST | `/api/upload-pdf/` | Upload PDF (Supports Digital & Scanned via OCR) |
 | POST | `/api/lectures/{note_id}/summarize/` | Summarize lecture note |
 
 ### Questions & Quizzes
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/generate-questions/{note_id}/` | Generate 5 MCQ questions |
-| POST | `/api/generate-mcqs/` | Generate MCQs (batch) |
-| GET | `/api/quiz/{note_id}/` | Get quiz questions (default 20) |
+| POST | `/api/generate-questions/{note_id}/` | Generate MCQ questions |
+| GET | `/api/quiz/{note_id}/` | Get quiz questions |
 | POST | `/api/submit-mcq/` | Submit MCQ answer |
 | POST | `/api/adaptive/quiz/start/` | Start adaptive quiz |
 | POST | `/api/quiz-completed/` | Mark quiz as completed |
-| PUT | `/api/questions/{question_id}/update/` | Update question |
 
 ### Analytics & Progress
 | Method | Endpoint | Description |
@@ -241,7 +249,6 @@ Follow the detailed guide in [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md)
 | GET | `/api/weak-topics/` | Get weak topics for a note |
 | GET | `/api/progress/` | Get overall progress |
 | GET | `/api/analytics/{note_id}/` | Get analytics for specific note |
-| GET | `/api/recent-weak-topics/` | Get recent weak topics |
 | GET | `/api/next-actions/` | Get recommended next actions |
 | GET | `/api/ai-insights/{note_id}/` | Get AI-powered insights |
 
@@ -254,32 +261,37 @@ Follow the detailed guide in [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md)
 ### Flashcards
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/flashcards/generate/` | Generate flashcards |
+| POST | `/api/flashcards/generate/` | Generate flashcards for a note |
 
 ### Exam Preparation
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/exam/syllabi/` | List all exam syllabi |
-| POST | `/api/exam/syllabus/upload/` | Upload exam syllabus |
-| POST | `/api/exam/syllabus/{syllabus_id}/papers/` | Upload previous papers |
-| POST | `/api/exam/syllabus/{syllabus_id}/generate/` | Generate exam questions |
-| GET | `/api/exam/syllabus/{syllabus_id}/questions/` | Get exam questions |
-| POST | `/api/exam/syllabus/{syllabus_id}/strategy/` | Generate exam strategy |
-| PUT | `/api/exam/question/{question_id}/update/` | Update exam question |
-| DELETE | `/api/exam/question/{question_id}/delete/` | Delete exam question |
+| GET | `/api/exam/syllabi/` | List all uploaded syllabi |
+| POST | `/api/exam/syllabus/upload/` | Upload exam syllabus (PDF/text) |
+| POST | `/api/exam/syllabus/{id}/papers/` | Upload previous question papers |
+| POST | `/api/exam/syllabus/{id}/generate/` | Generate exam questions with mark config |
+| GET | `/api/exam/syllabus/{id}/questions/` | Get generated exam questions |
+| POST | `/api/exam/syllabus/{id}/strategy/` | Generate AI study strategy roadmap |
+| PUT | `/api/exam/question/{id}/update/` | Update exam question |
+| DELETE | `/api/exam/question/{id}/delete/` | Delete exam question |
+
+### Concept Coach AI
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/ai-tutor/chat/` | Send a chat message — AI responds using Socratic method |
+
+### Rubric Evaluator
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/ai-tutor/evaluate/` | Upload assignment for rubric-based AI evaluation |
 
 ### Notifications
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/notifications/` | List all notifications |
-| POST | `/api/notifications/{id}/mark-read/` | Mark notification as read |
+| POST | `/api/notifications/{id}/mark-read/` | Mark as read |
 | POST | `/api/notifications/mark-all-read/` | Mark all as read |
 | DELETE | `/api/notifications/{id}/delete/` | Delete notification |
-
-### Video Generation
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/video/generate/` | Generate video script, audio, and slides |
 
 ### User Profile
 | Method | Endpoint | Description |
@@ -294,275 +306,203 @@ Follow the detailed guide in [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md)
 ### Core Models
 
 #### **LectureNote**
-- `user` (ForeignKey): Owner of the note
-- `title` (CharField): Note title
-- `file` (FileField): Uploaded PDF file
-- `content` (TextField): Extracted/input text content
-- `created_at` (DateTimeField): Creation timestamp
+`user` · `title` · `file` (PDF) · `content` (text) · `created_at`
 
-#### **Question**
-- `lecture_note` (ForeignKey): Associated lecture note
-- `topic` (CharField): Question topic
-- `question_text` (TextField): Question content
-- `option_a`, `option_b`, `option_c`, `option_d` (TextField): MCQ options
-- `correct_option` (CharField): Correct answer (A/B/C/D)
-- `explanation` (TextField): Answer explanation
-- `difficulty` (FloatField): Difficulty level (0.2-0.9)
+#### **Question** (MCQ)
+`lecture_note` · `topic` · `question_text` · `option_a/b/c/d` · `correct_option` · `explanation` · `difficulty` (0.2–0.9)
 
 #### **UserAnswer**
-- `user` (ForeignKey): User who answered
-- `question` (ForeignKey): Question answered
-- `user_answer` (TextField): User's selected option
-- `is_correct` (BooleanField): Correctness flag
-- `time_taken` (IntegerField): Time in seconds
-- `answered_at` (DateTimeField): Timestamp
-
-#### **TopicWeakness**
-- `lecture_note` (ForeignKey): Associated note
-- `user` (ForeignKey): User
-- `topic` (CharField): Topic name
-- `weakness_score` (FloatField): Weakness score (0.0-2.0)
+`user` · `question` · `user_answer` · `is_correct` · `time_taken` (seconds) · `answered_at`
 
 #### **TopicMastery**
-- `user` (ForeignKey): User
-- `lecture_note` (ForeignKey): Associated note
-- `topic` (CharField): Topic name
-- `mastery` (FloatField): Mastery level (0.0-1.0)
-- `last_updated` (DateTimeField): Last update timestamp
+`user` · `lecture_note` · `topic` · `mastery` (0.0–1.0) · `last_updated`
+
+#### **TopicWeakness**
+`user` · `lecture_note` · `topic` · `weakness_score` (0.0–2.0)
 
 #### **UserStreak**
-- `user` (ForeignKey): User
-- `topic` (CharField): Topic (null for global streak)
-- `streak` (IntegerField): Current streak count
-- `last_updated` (DateTimeField): Last update timestamp
+`user` · `topic` (null = global) · `streak` (int) · `last_updated`
 
 #### **QuizAttempt**
-- `user` (ForeignKey): User
-- `lecture_note` (ForeignKey): Associated note
-- `score` (IntegerField): Score achieved
-- `total_questions` (IntegerField): Total questions
-- `completed_at` (DateTimeField): Completion timestamp
+`user` · `lecture_note` · `score` · `total_questions` · `completed_at`
 
 #### **Badge**
-- `user` (ForeignKey): User
-- `name` (CharField): Badge name
-- `description` (TextField): Badge description
-- `icon` (CharField): Badge icon/emoji
-- `earned_at` (DateTimeField): Earned timestamp
+`user` · `name` · `description` · `icon` · `earned_at`
 
 ### Exam Preparation Models
 
 #### **ExamSyllabus**
-- `user` (ForeignKey): Owner
-- `title` (CharField): Syllabus title
-- `content` (TextField): Syllabus content
-- `file` (FileField): Uploaded PDF
-- `created_at`, `updated_at` (DateTimeField): Timestamps
+`user` · `title` · `content` (extracted text) · `file` (PDF) · `created_at` · `updated_at`
 
 #### **PreviousQuestionPaper**
-- `exam_syllabus` (ForeignKey): Associated syllabus
-- `file` (FileField): Uploaded PDF
-- `content` (TextField): Extracted text
-- `uploaded_at` (DateTimeField): Upload timestamp
+`exam_syllabus` · `file` · `content` (extracted text) · `uploaded_at`
 
 #### **ExamQuestion**
-- `exam_syllabus` (ForeignKey): Associated syllabus
-- `question_text` (TextField): Question
-- `answer` (TextField): Detailed answer
-- `marks` (IntegerField): Mark weightage
-- `priority` (IntegerField): Priority (1 = highest)
-- `topic` (CharField): Topic
-- `is_from_pattern` (BooleanField): Based on previous papers
+`exam_syllabus` · `question_text` · `answer` · `marks` · `priority` (1=highest) · `topic` · `is_from_pattern`
 
 #### **ExamConfiguration**
-- `exam_syllabus` (ForeignKey): Associated syllabus
-- `total_marks` (IntegerField): Total marks
-- `num_questions` (IntegerField): Number of questions
-- `mark_distribution` (JSONField): Mark distribution config
-- `secure_centum_mode` (BooleanField): Secure centum flag
+`exam_syllabus` · `total_marks` · `num_questions` · `mark_distribution` (JSON) · `secure_centum_mode`
 
 ---
 
-## 🔄 Workflows & Procedures
+## 🔄 Key Workflows
 
-### 1. **Basic Learning Workflow**
+### Learning Workflow
 
 ```mermaid
 graph TD
-    A[Upload Lecture Note] --> B[AI Generates Questions]
+    A[Upload Lecture Note] --> B[AI Generates MCQs]
     B --> C[Take Adaptive Quiz]
-    C --> D[System Tracks Performance]
-    D --> E{Weak Topics Detected?}
-    E -->|Yes| F[Generate Study Plan]
+    C --> D[Track Performance]
+    D --> E{Weak Topics?}
+    E -->|Yes| F[AI Study Plan]
     E -->|No| G[Continue Learning]
-    F --> H[Practice Weak Topics]
+    F --> H[Concept Coach AI Tutoring]
     H --> C
     G --> A
 ```
 
-**Steps:**
-1. **Upload Note**: POST `/api/upload-note/` with title and content
-2. **Generate Questions**: POST `/api/generate-questions/{note_id}/`
-3. **Start Quiz**: GET `/api/quiz/{note_id}/?n=20`
-4. **Submit Answers**: POST `/api/submit-mcq/` for each question
-5. **View Analytics**: GET `/api/analytics/{note_id}/`
-6. **Get Study Plan**: POST `/api/study-plan/`
-
-### 2. **Exam Preparation Workflow**
+### Exam Preparation Workflow
 
 ```mermaid
 graph TD
-    A[Upload Exam Syllabus] --> B[Upload Previous Papers]
-    B --> C[AI Analyzes Patterns]
-    C --> D[Generate Exam Questions]
-    D --> E[Review & Edit Questions]
-    E --> F[Generate Study Strategy]
-    F --> G[Follow Day-by-Day Plan]
-    G --> H[Practice Generated Questions]
+    A[Upload Syllabus] --> B[Upload Previous Papers]
+    B --> C[Configure Mark Distribution]
+    C --> D[Generate Question Bank]
+    D --> E[AI Strategy Roadmap]
+    E --> F[Day-by-Day Study Schedule]
+    F --> G[Practice Questions]
+    G --> H[Concept Coach AI for Doubts]
 ```
 
-**Steps:**
-1. **Upload Syllabus**: POST `/api/exam/syllabus/upload/` with PDF/text
-2. **Upload Papers**: POST `/api/exam/syllabus/{id}/papers/` with PDF files
-3. **Generate Questions**: POST `/api/exam/syllabus/{id}/generate/` with config:
-   ```json
-   {
-     "total_marks": 100,
-     "num_questions": 10,
-     "mark_distribution": {"2": 5, "5": 3, "10": 2},
-     "secure_centum_mode": false
-   }
-   ```
-4. **Get Questions**: GET `/api/exam/syllabus/{id}/questions/`
-5. **Generate Strategy**: POST `/api/exam/syllabus/{id}/strategy/` with:
-   ```json
-   {
-     "days_remaining": 5,
-     "hours_per_day": 4
-   }
-   ```
-
-### 3. **Adaptive Learning Algorithm**
+### Adaptive Learning Algorithm
 
 **Weakness Scoring:**
-- **Wrong Answer**: `weakness_score += 0.15 + (difficulty * 0.15)`
-- **Correct but Slow**: `weakness_score += 0.03-0.08 * difficulty`
-- **Correct and Fast**: `weakness_score -= 0.1-0.15 * mastery_gain`
+- Wrong answer: `weakness_score += 0.15 + (difficulty × 0.15)`
+- Correct but slow: `weakness_score += 0.03–0.08 × difficulty`
+- Correct and fast: `weakness_score -= 0.1–0.15 × mastery_gain`
 
 **Mastery Calculation:**
-- **Learning Rate**: 0.05-0.12 based on difficulty
-- **Correct**: `mastery += lr * (1.0 - current_mastery)`
-- **Wrong**: `mastery -= lr * 0.6 * current_mastery`
-- **Clamped**: 0.0 to 1.0
+- Learning rate: `0.05–0.12` based on difficulty
+- Correct: `mastery += lr × (1.0 - current_mastery)`
+- Wrong: `mastery -= lr × 0.6 × current_mastery`
+- Clamped: `0.0` to `1.0`
 
 **Question Selection:**
 1. 50% from weak topics (easier questions first)
-2. 50% matching target difficulty based on accuracy
+2. 50% matching target difficulty (based on recent accuracy)
 3. Avoids last 100 answered questions
 
 ---
 
-## 🧪 Testing
+## 🎨 Design System
 
-### Backend Tests
-```bash
-# Run all tests
-python manage.py test
+LearnFlow uses a consistent **glassmorphism dark theme**:
 
-# Test specific app
-python manage.py test core
-
-# Verify models
-python check_models.py
-python list_models.py
-```
-
-### Frontend Tests
-```bash
-cd frontend
-npm test
-```
-
----
-
-## 🛠️ Utility Scripts
-
-- **`check_django_key.py`**: Verify Django settings and Gemini API key
-- **`test_gemini.py`**: Test Gemini API connectivity
-- **`test_api_key.py`**: Validate Gemini API key
-- **`verify_quiz_count.py`**: Verify quiz question counts
-- **`reproduce_study_plan.py`**: Test study plan generation
-
----
-
-## 📊 Configuration
-
-### Django Settings (`backend/settings.py`)
-
-```python
-# JWT Token Lifetimes
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-}
-
-# CORS Configuration
-CORS_ALLOW_ALL_ORIGINS = True  # Change in production
-
-# Gemini API
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-```
-
-### Frontend API Configuration
-
-Update `src/config.js` (if exists) or use environment variables:
-```javascript
-const API_BASE_URL = 'http://localhost:8000/api';
-```
+- **Background**: Deep navy (`#0a0f1e`) with card blur (`backdrop-filter: blur(16px)`)
+- **Accent**: Electric blue (`#2563EB`) with purple gradient (`→ #7c3aed`)
+- **Cards**: Semi-transparent glass with subtle borders (`rgba(42, 59, 77, 0.7)`)
+- **Typography**: System font with bold weights (700–900) for headings
+- **Animations**: Smooth transitions (200ms), fade-in messages, bouncing typing dots
 
 ---
 
 ## 🚨 Troubleshooting
 
-### Common Issues
+**Gemini API 429 Rate Limit**
+- Built-in retry logic with exponential backoff. Wait a few seconds and retry.
 
-**1. Gemini API 429 Rate Limit**
-- The system has built-in retry logic with exponential backoff
-- Wait a few seconds and try again
+**PDF Extraction Fails**
+- Ensure `Tesseract-OCR` v5+ is installed and in PATH
+- Ensure `poppler-utils` (`pdftoppm`) is installed and in PATH
 
-**2. PDF Extraction Fails**
-- The system now supports SCANNED PDFs via Tesseract OCR.
-- Ensure `Tesseract-OCR` is installed on the server.
-- Ensure `poppler-utils` (or `pdftoppm`) is in the System PATH.
+**Questions Not Generating**
+- Verify `GEMINI_API_KEY` in `.env`
+- Check backend terminal for detailed error logs
 
-**3. Questions Not Generating**
-- Check Gemini API key in `.env`
-- Verify API key with `python test_gemini.py`
-- Check backend logs for detailed errors
+**Concept Coach / Rubric Evaluator not responding**
+- Confirm backend URL routing in `backend/urls.py` includes `ai-tutor/` paths
+- Check the `GEMINI_API_KEY` is valid and has quota
 
-**4. Google OAuth Not Working**
-- Verify redirect URI matches exactly
-- Check Site configuration in Django admin
-- Ensure Social Application is configured
+**Google OAuth Issues**
+- Verify redirect URI matches exactly in Google Cloud Console
+- Check Site configuration in Django Admin
 
-**5. CORS Errors**
-- Verify `CORS_ALLOW_ALL_ORIGINS = True` in settings
-- Check frontend is running on port 3000
+**CORS Errors**
+- Verify `CORS_ALLOW_ALL_ORIGINS = True` in Django settings (dev only)
+- Frontend must run on `http://localhost:3000`
 
 ---
 
-## 📈 Performance Optimization
+## 📊 Django Settings Reference
 
-### Backend
-- Use database indexing on frequently queried fields
-- Implement caching for analytics endpoints
-- Use pagination for large question lists
+```python
+# backend/settings.py
 
-### Frontend
-- Lazy load components with React.lazy()
-- Memoize expensive calculations
-- Use virtual scrolling for long lists
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+}
+
+CORS_ALLOW_ALL_ORIGINS = True  # Set to specific origins in production
+
+# Gemini API key loaded from .env
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+```
+
+---
+
+## 📁 Project Structure
+
+```
+LearnFlow/
+├── backend/              # Django project settings
+├── core/                 # Main Django app
+│   ├── models.py         # All database models
+│   ├── views.py          # Core API views (notes, quiz, analytics)
+│   ├── exam_views.py     # Exam preparation API views
+│   ├── ai_tutor_views.py # Concept Coach & Rubric Evaluator views
+│   ├── ai_utils.py       # Gemini AI wrapper
+│   └── urls.py           # URL routing
+├── frontend/
+│   └── src/
+│       ├── pages/
+│       │   ├── ConceptCoach.js      # ★ Flagship AI tutor chatbot
+│       │   ├── RubricEvaluator.js   # Assignment feedback tool
+│       │   ├── ExamPreparation.js   # Question bank + strategy
+│       │   ├── StudyPlan.js         # Long-term study planner
+│       │   ├── Dashboard.js         # Main analytics dashboard
+│       │   ├── Flashcards.js        # Flashcard study tool
+│       │   ├── SummarizeLectures.js # Lecture summarizer
+│       │   ├── Quiz.js              # Adaptive quiz engine
+│       │   └── Profile.js           # User profile
+│       ├── layout/
+│       │   └── SidebarLayout.js     # Main navigation sidebar
+│       ├── api/
+│       │   └── api.js               # Axios instance with JWT interceptor
+│       └── context/
+│           ├── AuthContext.js        # Auth state management
+│           └── ThemeContext.js       # Dark mode theme provider
+├── requirements.txt
+├── .env.example
+└── README.md
+```
+
+---
+
+## 🧪 Testing
+
+```bash
+# Backend
+python manage.py test
+python manage.py test core
+
+# Frontend
+cd frontend && npm test
+```
 
 ---
 
 **Happy Learning! 🎓**
+
+*LearnFlow — Study smarter, not harder.*

@@ -13,14 +13,47 @@ class LectureNote(models.Model):
     content = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # AI-generated study aids
+    study_notes = models.TextField(blank=True, null=True)  # Markdown formatted notes
+    formulas = models.JSONField(default=list, blank=True)   # List of {name, formula, description}
+    key_points = models.JSONField(default=list, blank=True) # List of key point strings
+
     def __str__(self):
         return self.title
+
+
+NOTE_COLORS = [
+    ('#FFF9C4', 'Yellow'),
+    ('#BBDEFB', 'Blue'),
+    ('#C8E6C9', 'Green'),
+    ('#FFCCBC', 'Orange'),
+    ('#E1BEE7', 'Purple'),
+    ('#F8BBD9', 'Pink'),
+]
+
+class StickyNote(models.Model):
+    """User-created class notes / sticky notes attached to a lecture (or standalone)."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sticky_notes')
+    lecture_note = models.ForeignKey(LectureNote, on_delete=models.CASCADE, related_name='sticky_notes', null=True, blank=True)
+    title = models.CharField(max_length=255, default='Class Note')
+    content = models.TextField(blank=True)
+    color = models.CharField(max_length=20, default='#FFF9C4')  # Hex color
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"{self.title} ({self.user.username})"
+
 
 
 class Question(models.Model):
     lecture_note = models.ForeignKey(LectureNote, on_delete=models.CASCADE, related_name='questions')
     topic = models.CharField(max_length=255, null=True, blank=True)  # NEW
     question_text = models.TextField()
+
 
     option_a = models.TextField(null=True, blank=True)
     option_b = models.TextField(null=True, blank=True)
@@ -120,6 +153,10 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     bio = models.TextField(blank=True, null=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    school = models.CharField(max_length=255, blank=True, null=True)
+    grade = models.CharField(max_length=50, blank=True, null=True)
+    subjects = models.JSONField(default=list, blank=True)  # List of subjects
+    preferences = models.JSONField(default=dict, blank=True)  # User preferences dict
 
     def __str__(self):
         return f"Profile of {self.user.username}"

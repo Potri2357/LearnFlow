@@ -3,6 +3,21 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Auth.css';
 
+import { IconButton, useTheme } from '@mui/material';
+import { 
+  Brightness4, 
+  Brightness7,
+  School,
+  AutoAwesome,
+  EmojiObjects,
+  TrendingUp,
+  Stars,
+  Rocket,
+  Psychology,
+  MenuBook
+} from '@mui/icons-material';
+import { useColorMode } from '../context/ThemeContext';
+
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -10,6 +25,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   
   const { login } = useAuth();
+  const { mode, toggleColorMode } = useColorMode();
+  const theme = useTheme();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -20,7 +37,7 @@ export default function Login() {
     const result = await login(username, password);
     
     if (result.success) {
-      navigate('/upload'); // Redirect to upload page after login
+      navigate('/dashboard'); // Redirect to dashboard page after login
     } else {
       setError(result.error);
     }
@@ -35,6 +52,63 @@ export default function Login() {
 
   return (
     <div className="auth-container">
+      <div style={{ position: 'absolute', top: 20, right: 20 }}>
+        <IconButton 
+          onClick={toggleColorMode} 
+          sx={{ 
+            color: 'white',
+            border: '1px solid rgba(255,255,255,0.3)',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }
+          }}
+        >
+          {mode === 'dark' ? <Brightness7 /> : <Brightness4 />}
+        </IconButton>
+      </div>
+      
+      {/* Floating Decorative Icons */}
+      <div style={{ position: 'absolute', top: '10%', left: '5%', opacity: 0.1, zIndex: 1 }}>
+        <AutoAwesome sx={{ fontSize: 80, color: 'white' }} />
+      </div>
+      <div style={{ position: 'absolute', top: '30%', right: '8%', opacity: 0.1, zIndex: 1 }}>
+        <EmojiObjects sx={{ fontSize: 60, color: 'white' }} />
+      </div>
+      <div style={{ position: 'absolute', bottom: '15%', left: '10%', opacity: 0.1, zIndex: 1 }}>
+        <TrendingUp sx={{ fontSize: 70, color: 'white' }} />
+      </div>
+      <div style={{ position: 'absolute', top: '50%', left: '3%', opacity: 0.08, zIndex: 1 }}>
+        <School sx={{ fontSize: 90, color: 'white' }} />
+      </div>
+      <div style={{ position: 'absolute', top: '70%', right: '5%', opacity: 0.08, zIndex: 1 }}>
+        <AutoAwesome sx={{ fontSize: 65, color: 'white', transform: 'rotate(45deg)' }} />
+      </div>
+      <div style={{ position: 'absolute', top: '20%', left: '50%', opacity: 0.06, zIndex: 1 }}>
+        <EmojiObjects sx={{ fontSize: 55, color: 'white', transform: 'rotate(-20deg)' }} />
+      </div>
+      <div style={{ position: 'absolute', bottom: '30%', right: '12%', opacity: 0.09, zIndex: 1 }}>
+        <TrendingUp sx={{ fontSize: 75, color: 'white', transform: 'rotate(15deg)' }} />
+      </div>
+      <div style={{ position: 'absolute', bottom: '5%', right: '50%', opacity: 0.07, zIndex: 1 }}>
+        <School sx={{ fontSize: 50, color: 'white', transform: 'rotate(-30deg)' }} />
+      </div>
+      <div style={{ position: 'absolute', top: '15%', right: '15%', opacity: 0.09, zIndex: 1 }}>
+        <Stars sx={{ fontSize: 55, color: 'white', transform: 'rotate(25deg)' }} />
+      </div>
+      <div style={{ position: 'absolute', top: '60%', left: '8%', opacity: 0.08, zIndex: 1 }}>
+        <Rocket sx={{ fontSize: 70, color: 'white', transform: 'rotate(-15deg)' }} />
+      </div>
+      <div style={{ position: 'absolute', bottom: '40%', right: '6%', opacity: 0.07, zIndex: 1 }}>
+        <Psychology sx={{ fontSize: 60, color: 'white', transform: 'rotate(20deg)' }} />
+      </div>
+      <div style={{ position: 'absolute', top: '40%', right: '50%', opacity: 0.06, zIndex: 1 }}>
+        <MenuBook sx={{ fontSize: 65, color: 'white', transform: 'rotate(-25deg)' }} />
+      </div>
+      <div style={{ position: 'absolute', bottom: '20%', left: '50%', opacity: 0.08, zIndex: 1 }}>
+        <Stars sx={{ fontSize: 45, color: 'white', transform: 'rotate(60deg)' }} />
+      </div>
+      <div style={{ position: 'absolute', top: '80%', left: '15%', opacity: 0.07, zIndex: 1 }}>
+        <Rocket sx={{ fontSize: 50, color: 'white', transform: 'rotate(35deg)' }} />
+      </div>
+      
       <div className="auth-card">
         {/* Logo and Branding */}
         <div className="auth-logo">
@@ -45,8 +119,8 @@ export default function Login() {
               <path d="M24 20L32 28L24 36L16 28L24 20Z" fill="white" opacity="0.7" />
               <defs>
                 <linearGradient id="gradient" x1="0" y1="0" x2="48" y2="48">
-                  <stop offset="0%" stopColor="#667eea" />
-                  <stop offset="100%" stopColor="#764ba2" />
+                  <stop offset="0%" stopColor="#2563eb" />
+                  <stop offset="100%" stopColor="#0d9488" />
                 </linearGradient>
               </defs>
             </svg>

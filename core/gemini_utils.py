@@ -25,11 +25,11 @@ def generate_with_gemini(prompt, model_priority=None):
     
     if model_priority is None:
         model_priority = [
-            "gemini-2.5-flash",    # Found in list
-            "gemini-3-pro-exp",    # Found in list
-            "deepthink-exp-05-20", # Found in list
-            "gemini-2.0-flash-exp",
-            "gemini-1.5-flash"
+            "gemini-2.0-flash",           # Fast, capable, available
+            "gemini-2.0-flash-lite",       # Lighter fallback
+            "gemini-1.5-flash",            # Stable fallback
+            "gemini-1.5-flash-8b",         # Cheapest fallback
+            "gemini-1.5-pro",              # High quality last resort
         ]
     
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -54,8 +54,8 @@ def generate_with_gemini(prompt, model_priority=None):
             }
             
             try:
-                # Short timeout per model to allow trying multiple
-                response = requests.post(url, json=payload, headers=headers, timeout=30)
+                # Increased timeout for complex AI generation (e.g. exam questions)
+                response = requests.post(url, json=payload, headers=headers, timeout=90)
                 
                 if response.status_code == 200:
                     # Success!

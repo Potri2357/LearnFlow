@@ -4,20 +4,24 @@ from .views import (
     upload_lecture_note, generate_questions, submit_answer, weak_topics, progress,
     generate_mcqs, get_quiz_questions, submit_mcq_answer, adaptive_quiz_start, generate_study_plan,
     analytics_for_note, recent_weak_topics, next_actions, ai_insights,
-    upload_pdf, get_note_details, quiz_completed, user_profile,
+    upload_pdf, get_note_details, quiz_completed, user_profile, get_dashboard_stats,
     RegisterView, NotificationListView, NotificationMarkReadView, 
     NotificationMarkAllReadView, NotificationDeleteView, CurrentUserView,
     LectureNoteListView, LectureNoteDetailView,
     generate_flashcards, update_question, summarize_lecture,
+    get_weak_topic_explanation, get_lectures_by_topics, generate_lecture_study_aids,
     # Exam preparation views
     upload_exam_syllabus, upload_previous_papers, generate_exam_questions,
     get_exam_questions, update_exam_question, delete_exam_question, list_exam_syllabi,
-    generate_exam_strategy, generate_video_explanation
+    generate_exam_strategy, generate_video_explanation,
+    sticky_notes, sticky_note_detail
 )
+from .ai_tutor_views import concept_coach_chat, evaluate_assignment
 from .auth_views import CustomTokenObtainPairView
 
 
 urlpatterns = [
+    path("dashboard/stats/", get_dashboard_stats, name='dashboard_stats'),
     path("upload-note/", upload_lecture_note),
     path('generate-questions/<int:note_id>/', generate_questions, name='generate_questions'),
     path("submit-answer/", submit_answer),
@@ -61,7 +65,12 @@ urlpatterns = [
     # Lecture URLs
     path('lectures/', LectureNoteListView.as_view(), name='lecture_list'),
     path('lectures/<int:pk>/', LectureNoteDetailView.as_view(), name='lecture_detail'),
+    path('lectures/<int:note_id>/generate-study-aids/', generate_lecture_study_aids, name='generate_study_aids'),
     
+    # Sticky Notes
+    path('sticky-notes/', sticky_notes, name='sticky_notes_list_create'),
+    path('sticky-notes/<int:note_id>/', sticky_note_detail, name='sticky_note_detail'),
+
     # Question Management
     path('questions/<int:question_id>/update/', update_question, name='update_question'),
 
@@ -70,6 +79,12 @@ urlpatterns = [
     
     # Lecture Summarization
     path('lectures/<int:note_id>/summarize/', summarize_lecture, name='summarize_lecture'),
+    
+    # Weak Topic Explanation
+    path('weak-topic/explain/', get_weak_topic_explanation, name='weak_topic_explanation'),
+    
+    # Multi-Lecture Quiz
+    path('lectures/by-topics/', get_lectures_by_topics, name='get_lectures_by_topics'),
     
     # Exam Preparation
     path('exam/syllabi/', list_exam_syllabi, name='list_exam_syllabi'),
@@ -83,4 +98,8 @@ urlpatterns = [
     
     # Video Generation
     path('video/generate/', generate_video_explanation, name='generate_video_explanation'),
+
+    # AI Tutor & Evaluator
+    path('ai-tutor/chat/', concept_coach_chat, name='concept_coach_chat'),
+    path('ai-tutor/evaluate/', evaluate_assignment, name='evaluate_assignment'),
 ]

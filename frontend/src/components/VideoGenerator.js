@@ -90,22 +90,53 @@ const VideoGenerator = ({ questionId, text }) => {
   };
 
   if (loading) {
+    const currentStageIndex = Math.floor((progressPercent / 100) * loadingMessages.length);
+    
     return (
-      <Box sx={{ mt: 3, textAlign: 'center', p: 4, bgcolor: '#f8f9fa', borderRadius: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, color: '#333', mb: 2 }}>
-          Creating Your Explainer Video
+      <Box sx={{ mt: 3, textAlign: 'center', p: 4, bgcolor: '#f8f9fa', borderRadius: 2, boxShadow: 1 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, color: '#333', mb: 3 }}>
+           creating your "Deep Dive" video... 🤖🎥
         </Typography>
         
-        <Box sx={{ width: '100%', mb: 2 }}>
-            <LinearProgress variant="determinate" value={progressPercent} sx={{ height: 10, borderRadius: 5, bgcolor: '#e0e0e0', '& .MuiLinearProgress-bar': { borderRadius: 5, background: 'linear-gradient(90deg, #6200ea, #b388ff)' } }} />
+        {/* Visual Progress Stages */}
+        <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center', gap: 1 }}>
+             {loadingMessages.map((msg, idx) => (
+                 <Box key={idx} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 60 }}>
+                      <Box sx={{ 
+                          width: 12, height: 12, borderRadius: '50%', 
+                          bgcolor: idx <= currentStageIndex ? 'secondary.main' : 'action.disabled',
+                          transition: 'all 0.5s',
+                          mb: 1
+                      }} />
+                 </Box>
+             ))}
+        </Box>
+
+        <Box sx={{ width: '100%', mb: 2, position: 'relative' }}>
+             <LinearProgress 
+                variant="determinate" 
+                value={progressPercent} 
+                sx={{ 
+                    height: 12, 
+                    borderRadius: 6, 
+                    bgcolor: 'rgba(0,0,0,0.05)', 
+                    '& .MuiLinearProgress-bar': { 
+                        borderRadius: 6, 
+                        background: 'linear-gradient(90deg, #038C7F, #027373)' 
+                    } 
+                }} 
+            />
+            <Typography variant="caption" sx={{ position: 'absolute', top: 16, right: 0, fontWeight: 700, color: 'text.secondary' }}>
+                {progressPercent}%
+            </Typography>
         </Box>
         
-        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-          {loadingMessages[Math.floor((progressPercent / 100) * loadingMessages.length)] || "Finalizing..."} ({progressPercent}%)
+        <Typography variant="body1" color="text.primary" sx={{ fontWeight: 600, minHeight: 40, transition: 'all 0.3s' }}>
+          {loadingMessages[currentStageIndex] || "Finishing touches..."}
         </Typography>
         
-        <Typography variant="caption" display="block" sx={{ mt: 2, color: '#666', fontStyle: 'italic' }}>
-          "Speed depends on complexity. Generating visuals and voiceovers in parallel..."
+        <Typography variant="caption" display="block" sx={{ mt: 2, color: 'text.secondary', fontStyle: 'italic', maxWidth: 400, mx: 'auto' }}>
+          "This involves writing a script, generating AI art for every scene, cloning voices, and rendering video. It takes about 45-60 seconds."
         </Typography>
       </Box>
     );
@@ -214,17 +245,17 @@ const VideoGenerator = ({ questionId, text }) => {
               return (
                 <Step key={index} expanded={true}>
                   <StepLabel 
-                    StepIconProps={{ sx: { color: scene.speaker === 'Expert' ? '#009688' : '#6200ea' } }}
+                    StepIconProps={{ sx: { color: scene.speaker === 'Expert' ? '#038C7F' : '#6200ea' } }}
                   >
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                         <Typography variant="subtitle2" sx={{ fontWeight: 600, color: scene.speaker === 'Expert' ? '#00796b' : '#4527a0' }}>
+                         <Typography variant="subtitle2" sx={{ fontWeight: 600, color: scene.speaker === 'Expert' ? '#027373' : '#4527a0' }}>
                             {scene.speaker.toUpperCase()}
                          </Typography>
                          <Typography variant="caption" color="text.secondary">{scene.duration}s</Typography>
                     </Box>
                   </StepLabel>
                   <StepContent>
-                    <Paper elevation={0} sx={{ p: 2, bgcolor: scene.speaker==='Expert' ? '#e0f2f1' : '#f3e5f5', borderRadius: 2 }}>
+                    <Paper elevation={0} sx={{ p: 2, bgcolor: scene.speaker==='Expert' ? '#F2E7DC' : '#f3e5f5', borderRadius: 2 }}>
                         <Typography variant="body1" sx={{ fontStyle: 'italic', mb: 2, color: '#333' }}>
                             "{scene.text}"
                         </Typography>
@@ -253,7 +284,7 @@ const VideoGenerator = ({ questionId, text }) => {
                                     variant="contained"
                                     onClick={handleNext}
                                     disabled={index === scenes.length - 1}
-                                    sx={{ mt: 1, mr: 1, bgcolor: scene.speaker==='Expert'?'#009688':'#6200ea' }}
+                                    sx={{ mt: 1, mr: 1, bgcolor: scene.speaker==='Expert'?'#038C7F':'#6200ea' }}
                                     size="small"
                                 >
                                     Next

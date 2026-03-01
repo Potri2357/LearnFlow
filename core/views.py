@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.db import models
-from django.db.models import Avg, Count, Q
+from django.db.models import Avg, Count, Q, Sum as ModelsSum
 
 from rest_framework.decorators import api_view, parser_classes, permission_classes
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -14,7 +14,8 @@ from rest_framework import status, permissions
 
 from .models import (
     LectureNote, Question, UserAnswer, TopicWeakness,
-    TopicMastery, UserStreak, StudyPlan, UserProgress, Notification, QuizAttempt
+    TopicMastery, UserStreak, StudyPlan, UserProgress, Notification, QuizAttempt,
+    ExamSyllabus, ExamConfiguration, UserProfile, StickyNote
 )
 from .serializers import LectureNoteSerializer, QuestionSerializer, UserAnswerSerializer
 from .ml_utils import extract_topics
@@ -175,6 +176,23 @@ def submit_mcq_answer(request):
         # Apply bounds: weakness score should stay in reasonable range
         t.weakness_score = max(0.0, min(2.0, t.weakness_score))
         t.save()
+        
+        # --- SYNC TO TOPIC MAINTAIN ---
+        # Mastery = 1.0 - (Weakness / 2.0)
+        # 0.0 weakness => 1.0 mastery (100%)
+        # 1.0 weakness => 0.5 mastery (50%)
+        # 2.0 weakness => 0.0 mastery (0%)
+        
+        try:
+            mst_val = max(0.0, 1.0 - (t.weakness_score / 2.0))
+            TopicMastery.objects.update_or_create(
+                user=user,
+                lecture_note=question.lecture_note,
+                topic=t.topic,
+                defaults={"mastery": mst_val}
+            )
+        except Exception as e:
+            print(f"Error syncing mastery: {e}")
 
     return Response({"correct": is_correct, "correct_option": question.correct_option})
 
@@ -183,42 +201,53 @@ def submit_mcq_answer(request):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def upload_lecture_note(request):
-    user = request.user
+    try:
+        user = request.user
 
-    title = request.data.get("title")
-    content = request.data.get("content")
+        title = request.data.get("title")
+        content = request.data.get("content")
 
-    # Check for duplicate content
-    existing_note = LectureNote.objects.filter(user=user, content=content).first()
-    if existing_note:
-        return Response({
-            "message": "Note already exists.",
-            "note_id": existing_note.id,
-            "topics": []
-        }, status=200)
+        if not title or not content:
+            return Response({"error": "Title and content are required."}, status=400)
 
-    note = LectureNote.objects.create(
-        user=user,
-        title=title,
-        content=content
-    )
+        # Check for duplicate content
+        existing_note = LectureNote.objects.filter(user=user, content=content).first()
+        if existing_note:
+            return Response({
+                "message": "Note already exists.",
+                "note_id": existing_note.id,
+                "topics": []
+            }, status=200)
 
-    # Now extract topics and save weakness
-    topics = extract_topics(content)
-
-    for topic in topics:
-        TopicWeakness.objects.create(
+        note = LectureNote.objects.create(
             user=user,
-            lecture_note=note,
-            topic=topic,
-            weakness_score=0.0
+            title=title,
+            content=content
         )
 
-    return Response({
-        "message": "Note uploaded",
-        "note_id": note.id,
-        "topics": topics
-    })
+        # Now extract topics and save weakness
+        try:
+            topics = extract_topics(content)
+        except Exception as e:
+            print(f"Topic extraction failed: {e}")
+            topics = ["general"]
+
+        for topic in topics:
+            TopicWeakness.objects.create(
+                user=user,
+                lecture_note=note,
+                topic=topic,
+                weakness_score=0.0
+            )
+
+        return Response({
+            "message": "Note uploaded",
+            "note_id": note.id,
+            "topics": topics
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)
 
 
 
@@ -256,30 +285,67 @@ Return ONLY JSON in this format:
 ]
 """
 
-    # ==== 3. Send to AI (Use Fast Mistral 7B) ====
+    # ==== 3. Send to AI (Strategy: Try Llama -> Fallback to Gemini) ====
+    output_text = ""
+    source = "Llama"
+    
     try:
-        output_text = generate_ai_content(mcq_prompt, model="mistralai/mistral-7b-instruct:free")
-        print("RAW AI QUESTION OUTPUT:", output_text)
-
-        # Extract text - NO LONGER NEEDED as generate_ai_content returns str
-        # output_text = raw["candidates"][0]["content"]["parts"][0]["text"]
+        # 1. Try Llama (User Preference)
+        try:
+            output_text = generate_ai_content(mcq_prompt, model="meta-llama/llama-3.3-70b-instruct:free")
+            if not output_text or not output_text.strip():
+                raise Exception("Empty response from Llama")
+            
+            # Quick check if it looks like JSON
+            if "{" not in output_text and "[" not in output_text:
+                 raise Exception("Response does not look like JSON")
+                 
+            print("RAW Llama OUTPUT:", output_text)
+            
+        except Exception as e:
+            print(f"Llama Generation failed ({e}). Falling back to Gemini...")
+            source = "Gemini"
+            # 2. Fallback to Gemini
+            gemini_response = generate_with_gemini(mcq_prompt)
+            output_text = gemini_response["candidates"][0]["content"]["parts"][0]["text"]
+            print("RAW Gemini OUTPUT:", output_text)
 
     except Exception as e:
-        return JsonResponse({"error": f"Gemini error: {e}"}, status=500)
+        return JsonResponse({"error": f"All AI Generation failed: {e}"}, status=500)
 
     # ==== 4. Safe JSON parsing (handles bad output) ====
     try:
         # Fix common formatting errors
         cleaned = output_text.strip()
-
-        # Sometimes Gemini adds backticks or Markdown
-        cleaned = cleaned.replace("```json", "").replace("```", "").strip()
-
+        
+        # Remove markdown code blocks
+        if "```json" in cleaned:
+            cleaned = cleaned.split("```json")[1].split("```")[0]
+        elif "```" in cleaned:
+             cleaned = cleaned.split("```")[1].split("```")[0]
+             
+        cleaned = cleaned.strip()
         questions_json = json.loads(cleaned)
 
     except Exception:
         return JsonResponse({
-            "error": "Gemini JSON parsing failed",
+            "error": "JSON parsing failed",
+            "raw_output": output_text,
+            "source": source
+        }, status=400)
+        
+        # Remove markdown code blocks
+        if "```json" in cleaned:
+            cleaned = cleaned.split("```json")[1].split("```")[0]
+        elif "```" in cleaned:
+             cleaned = cleaned.split("```")[1].split("```")[0]
+             
+        cleaned = cleaned.strip()
+        questions_json = json.loads(cleaned)
+
+    except Exception:
+        return JsonResponse({
+            "error": "JSON parsing failed",
             "raw_output": output_text
         }, status=400)
 
@@ -321,87 +387,100 @@ Return ONLY JSON in this format:
 # API 3: Submit Answer
 @api_view(['POST'])
 def submit_answer(request):
-    user = User.objects.first()
-    question_id = request.data.get("question_id")
-    user_answer = request.data.get("user_answer")
+    try:
+        user = User.objects.first()
+        question_id = request.data.get("question_id")
+        user_answer = request.data.get("user_answer")
 
-    question = Question.objects.get(id=question_id)
-    is_correct = (user_answer.lower() == question.correct_answer.lower())
+        question = Question.objects.get(id=question_id)
+        is_correct = (user_answer.lower() == question.correct_answer.lower())
 
-    # Save answer
-    UserAnswer.objects.create(
-        user=user,
-        question=question,
-        user_answer=user_answer,
-        is_correct=is_correct
-    )
-
-    # Update weakness score (if wrong)
-    if not is_correct:
-        # find related topics of this lecture note
-        print("UPDATING WEAKNESS...")
-        topics = TopicWeakness.objects.filter(
-            lecture_note=question.lecture_note,
-            user=user
+        # Save answer
+        UserAnswer.objects.create(
+            user=user,
+            question=question,
+            user_answer=user_answer,
+            is_correct=is_correct
         )
 
-        for t in topics:
-            t.weakness_score += 0.2
-            t.save()
-            
-    print("IS CORRECT:", is_correct)
-    print("QUESTION ID:", question.id)
-    print("QUESTION NOTE ID:", question.lecture_note.id)
+        # Update weakness score (if wrong)
+        if not is_correct:
+            # find related topics of this lecture note
+            print("UPDATING WEAKNESS...")
+            topics = TopicWeakness.objects.filter(
+                lecture_note=question.lecture_note,
+                user=user
+            )
 
+            for t in topics:
+                t.weakness_score += 0.2
+                t.save()
+                
+        print("IS CORRECT:", is_correct)
+        print("QUESTION ID:", question.id)
+        print("QUESTION NOTE ID:", question.lecture_note.id)
 
-    return Response({"correct": is_correct})
+        return Response({"correct": is_correct})
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)
 
 
 # API 4: Get Weak Topics
 @api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
 def weak_topics(request):
-    user = User.objects.first()
-    note_id = request.GET.get("note_id")
-
-    if not note_id:
-        return Response({"error": "note_id is required"}, status=400)
-
     try:
-        note = LectureNote.objects.get(id=note_id)
-    except LectureNote.DoesNotExist:
-        return Response({"error": "Invalid note_id"}, status=404)
+        user = request.user
+        note_id = request.GET.get("note_id")
 
-    weaknesses = TopicWeakness.objects.filter(
-        user=user,
-        lecture_note=note
-    ).order_by('-weakness_score')
+        if not note_id:
+            return Response({"error": "note_id is required"}, status=400)
 
-    data = [
-        {"topic": w.topic, "score": w.weakness_score}
-        for w in weaknesses
-    ]
+        try:
+            note = LectureNote.objects.get(id=note_id)
+        except LectureNote.DoesNotExist:
+            return Response({"error": "Invalid note_id"}, status=404)
 
-    return Response({"weak_topics": data})
+        weaknesses = TopicWeakness.objects.filter(
+            user=user,
+            lecture_note=note
+        ).order_by('-weakness_score')
+
+        data = [
+            {"topic": w.topic, "score": w.weakness_score}
+            for w in weaknesses
+        ]
+
+        return Response({"weak_topics": data})
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)
 
 
 
 
 # API 5: Get Progress
 @api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
 def progress(request):
-    user = User.objects.first()
+    try:
+        user = request.user
 
-    answers = UserAnswer.objects.filter(user=user)
-    total = answers.count()
-    correct = answers.filter(is_correct=True).count()
+        answers = UserAnswer.objects.filter(user=user)
+        total = answers.count()
+        correct = answers.filter(is_correct=True).count()
 
-    accuracy = (correct / total) * 100 if total > 0 else 0
+        accuracy = (correct / total) * 100 if total > 0 else 0
 
-    return Response({
-        "total_questions": total,
-        "correct_answers": correct,
-        "accuracy": accuracy
-    })
+        return Response({
+            "total_questions": total,
+            "correct_answers": correct,
+            "accuracy": accuracy
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)
     
 
 def get_user():
@@ -557,12 +636,13 @@ def select_adaptive_questions(note_id, user, n=10):
 # --- new endpoint: adaptive quiz start ---
 
 @api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
 def adaptive_quiz_start(request):
     """
     Request body: { "note_id": <int>, "n": 10 }
     Returns: JSON list of serialized questions (MCQ fields).
     """
-    user = get_user()
+    user = request.user
     note_id = request.data.get("note_id")
     n = int(request.data.get("n", 10))
     try:
@@ -576,15 +656,18 @@ def adaptive_quiz_start(request):
 # --- override/extend submit_mcq_answer to update mastery + streaks ---
 
 @api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
 def submit_mcq_answer(request):
     """
     POST { "question_id": <id>, "selected_option": "A" }
     Updates UserAnswer + TopicMastery + TopicWeakness + UserProgress
     """
     try:
-        user = get_user()
+        user = request.user
         qid = request.data.get("question_id")
         sel = request.data.get("selected_option","").strip().upper()
+        time_taken = int(request.data.get("time_taken", 0))
+
         if not qid:
             return Response({"error":"question_id required"}, status=400)
 
@@ -595,7 +678,8 @@ def submit_mcq_answer(request):
             user=user,
             question=question,
             user_answer=sel,
-            is_correct=is_correct
+            is_correct=is_correct,
+            time_taken=time_taken
         )
 
         # Primary topic is question.topic
@@ -683,9 +767,33 @@ def quiz_completed(request):
         from .signals import create_quiz_completion_notification
         create_quiz_completion_notification(user, note, current_score, total)
         
-
+        # --- Update Streak ---
+        from django.utils import timezone
+        import datetime
         
-        return Response({"message": "Notification created", "score": current_score})
+        # Global Streak (topic=None)
+        user_streak, created = UserStreak.objects.get_or_create(user=user, topic=None)
+        
+        now = timezone.now()
+        today = now.date()
+        last_date = user_streak.last_updated.date() if not created else (today - datetime.timedelta(days=1))
+        
+        if created:
+            user_streak.streak = 1
+            user_streak.save()
+        else:
+            # If validated today, do nothing (streak already counted or maintained)
+            # Unless we want to count distinct sessions? usually streak is daily.
+            if last_date < today:
+                if last_date == (today - datetime.timedelta(days=1)):
+                    # Consecutive day
+                    user_streak.streak += 1
+                else:
+                    # Broken streak
+                    user_streak.streak = 1
+                user_streak.save()
+        
+        return Response({"message": "Notification created", "score": current_score, "streak": user_streak.streak})
     except Exception as e:
         traceback.print_exc()
         return Response({"error": str(e)}, status=500)
@@ -765,16 +873,24 @@ def parse_numbered_sections(text):
 def generate_study_plan(request):
     """
     Build study plan using current mastery + weak topics and call Gemini.
-    Tries 'gemini-2.0-flash-exp' first, falls back to 'gemini-1.5-flash'.
+    Accepts optional parameters: exam_date, hours_per_day, priority_subjects, focus_weak_areas.
     """
     try:
         note_id = request.data.get("note_id")
+        exam_date = request.data.get("exam_date")
+        hours_per_day = request.data.get("hours_per_day")
+        priority_subjects = request.data.get("priority_subjects", [])
+        focus_weak_areas = request.data.get("focus_weak_areas", False)
+
         note = get_object_or_404(LectureNote, id=note_id)
-        user = get_user()
+        user = request.user
 
         mastery_qs = TopicMastery.objects.filter(user=user, lecture_note=note)
         strengths = {m.topic: round(m.mastery, 2) for m in mastery_qs if m.mastery >= 0.65}
-        weak_topics = {m.topic: round(m.mastery, 2) for m in mastery_qs if m.mastery < 0.45}
+        
+        # Get weak topics
+        weakness_qs = TopicWeakness.objects.filter(user=user, lecture_note=note).order_by("-weakness_score")
+        weak_topics = {w.topic: round(w.weakness_score, 2) for w in weakness_qs if w.weakness_score > 0.3}
 
         # Safe fallback (so LLM always has something)
         if not strengths:
@@ -785,10 +901,24 @@ def generate_study_plan(request):
         strengths_text = "\n".join([f"- {k}: mastery {v}" for k,v in strengths.items()])
         weaknesses_text = "\n".join([f"- {k}: mastery {v}" for k,v in weak_topics.items()])
 
+        # Build prompt context
+        user_context = ""
+        if exam_date:
+            user_context += f"Target Exam Date: {exam_date}\n"
+        if hours_per_day:
+            user_context += f"Daily Study Commitment: {hours_per_day} hours\n"
+        if priority_subjects:
+            user_context += f"Priority Subjects (User Selected): {', '.join(priority_subjects) if isinstance(priority_subjects, list) else priority_subjects}\n"
+        if focus_weak_areas:
+            user_context += "EMPHASIS: Focus heavily on weak areas.\n"
+
         prompt = f"""
 You are an AI tutor. Generate a structured study plan for the student based on the data below.
 
 Lecture note: {note.title}
+
+Student Profile:
+{user_context}
 
 Strength Topics:
 {strengths_text}
@@ -844,15 +974,12 @@ Rules:
 """
 
         # Try primary model (verified available)
-        # Try primary model (verified available)
         try:
             # Returns plain text - use Mistral for speed
             plan_text = generate_ai_content(prompt, model="mistralai/mistral-7b-instruct:free")
         except Exception as e:
             print(f"AI generation failed: {e}")
             raise e
-
-        # fallback checks removed as generate_ai_content handles format
 
         # clean obvious wrappers
         plan_text = plan_text.replace("```", "").strip()
@@ -1213,6 +1340,13 @@ def upload_pdf(request):
         file_obj.seek(0)
         final_content = process_document_pipeline(file_obj=file_obj, extracted_text_if_digital=initial_text)
 
+        # 3. Validation: If content is still empty/too short, fail gracefully
+        if not final_content or len(final_content.strip()) < 20:
+             return Response({
+                 "error": "Could not extract text from this document. If this is a scanned PDF, OCR tools (Tesseract/Poppler) may be missing on the server. Please upload a digital PDF.",
+                 "details": "OCR Extraction Failed"
+             }, status=422)
+
         # Check for duplicate content (using final processed content)
         existing_note = LectureNote.objects.filter(user=user, content=final_content).first()
         if existing_note:
@@ -1287,65 +1421,102 @@ def generate_mcqs(request):
         note = get_object_or_404(LectureNote, id=note_id)
         content = note.content or ""
 
-        prompt = f"""
-Generate exactly {count} high-quality multiple-choice questions (MCQs) covering the full content below.
-For each question, return a JSON object with these keys:
-- topic: short topic name (single phrase)
-- question: the question text
-- options: an array of 4 strings (A,B,C,D)
-- answer: the correct letter (A/B/C/D)
-- explanation: a 1-2 sentence explanation
-- difficulty: "easy" or "medium" or "hard"
+        if not content.strip():
+            return Response({"error": "This lecture note has no text content. Upload a PDF with readable text first."}, status=400)
 
-Return a JSON array ONLY (no markdown, no text before/after).
-Content:
-\"\"\"{content}\"\"\"
+        prompt = f"""You are an expert educational AI. Generate exactly {count} multiple-choice questions (MCQs) from the lecture content below.
+
+For each question return a JSON object with EXACTLY these keys:
+- "topic": short topic name (e.g. "Photosynthesis", "Newton's Laws")
+- "question_text": the full question text (use **bold** or `code` for emphasis where helpful)
+- "option_a": first answer option (text only, no "A." prefix)
+- "option_b": second answer option
+- "option_c": third answer option
+- "option_d": fourth answer option
+- "correct_option": the letter of the correct option — exactly one of: "A", "B", "C", or "D"
+- "explanation": 1-3 sentence explanation of why the correct answer is right
+- "difficulty": "easy", "medium", or "hard"
+
+Requirements:
+- Use markdown formatting in question_text and explanation where it improves clarity (**bold**, `code`, etc.)
+- All 4 options must be plausible. Only one is correct.
+- Cover diverse topics from throughout the content.
+- Return a JSON ARRAY only. No markdown code blocks, no text before or after.
+
+Lecture Content:
+\"\"\"{content[:6000]}\"\"\"
+
+Return format:
+[
+  {{
+    "topic": "Topic Name",
+    "question_text": "What is ...?",
+    "option_a": "First choice",
+    "option_b": "Second choice",
+    "option_c": "Third choice",
+    "option_d": "Fourth choice",
+    "correct_option": "B",
+    "explanation": "Because ...",
+    "difficulty": "medium"
+  }}
+]
 """
 
+        try:
+            output_text = generate_ai_content(prompt)
+        except Exception as e:
+            return JsonResponse({"error": f"AI generation failed: {str(e)}", "details": "Check that your GEMINI_API_KEY is valid."}, status=500)
 
-        # Use Fast Mistral for MCQs
-        raw_text = generate_ai_content(prompt, model="mistralai/mistral-7b-instruct:free")
-        
-        # Extract text from response - NO LONGER NEEDED
-        # raw_text = response_data...
+        cleaned = output_text.strip().replace("```json", "").replace("```", "").strip()
 
-        cleaned = raw_text.strip().replace("```json", "").replace("```", "").strip()
-
-        # sometimes LLM prints extra text; attempt to find first JSON array
+        # Robustly find the JSON array
         import re
-        m = re.search(r'\[.*\]', cleaned, flags=re.DOTALL)
-        json_str = m.group(0) if m else cleaned
+        start = cleaned.find('[')
+        end = cleaned.rfind(']')
+        if start != -1 and end != -1:
+            json_str = cleaned[start:end+1]
+        else:
+            m = re.search(r'\[.*\]', cleaned, flags=re.DOTALL)
+            json_str = m.group(0) if m else cleaned
 
-        mcqs = json.loads(json_str)
+        try:
+            mcqs = json.loads(json_str)
+        except json.JSONDecodeError as je:
+            return Response({"error": "AI returned invalid JSON", "details": str(je), "raw": cleaned[:500]}, status=500)
 
         saved = []
         for item in mcqs:
-            topic = item.get("topic") or (item.get("question").split()[0][:30] if item.get("question") else "general")
-            options = item.get("options", [])
-            # ensure 4 options
-            while len(options) < 4:
-                options.append("")
+            if not isinstance(item, dict):
+                continue
+            topic = item.get("topic") or "General"
             q = Question.objects.create(
                 lecture_note=note,
                 topic=topic,
-                question_text=item.get("question",""),
-                option_a=clean_option_text(options[0]),
-                option_b=clean_option_text(options[1]),
-                option_c=clean_option_text(options[2]),
-                option_d=clean_option_text(options[3]),
-                correct_option=item.get("answer","").strip().upper()[:1],
-                explanation=item.get("explanation",""),
-                difficulty=0.5 if item.get("difficulty") is None else (0.3 if item.get("difficulty")=="easy" else (0.6 if item.get("difficulty")=="medium" else 0.85))
+                question_text=item.get("question_text", ""),
+                option_a=item.get("option_a", ""),
+                option_b=item.get("option_b", ""),
+                option_c=item.get("option_c", ""),
+                option_d=item.get("option_d", ""),
+                correct_option=(item.get("correct_option") or "A").strip().upper()[:1],
+                explanation=item.get("explanation", ""),
+                difficulty=0.3 if item.get("difficulty") == "easy" else (0.85 if item.get("difficulty") == "hard" else 0.5)
             )
             saved.append(QuestionSerializer(q).data)
             # Ensure TopicMastery exists for this topic
-            TopicMastery.objects.get_or_create(user=note.user or get_user(), lecture_note=note, topic=topic, defaults={"mastery": 0.30})
+            if note.user:
+                TopicMastery.objects.get_or_create(
+                    user=note.user,
+                    lecture_note=note,
+                    topic=topic,
+                    defaults={"mastery": 0.30}
+                )
 
         return Response({"generated_count": len(saved), "questions": saved})
 
     except Exception as e:
         traceback.print_exc()
-        return Response({"error":"Gemini request failed", "details": str(e)}, status=500)
+        return Response({"error": "MCQ generation failed", "details": str(e)}, status=500)
+
 
 
 
@@ -1463,62 +1634,32 @@ def user_profile(request):
     user = request.user
     
     if request.method == 'GET':
-        # Calculate stats using QuizAttempt
-        attempts = QuizAttempt.objects.filter(user=user)
-        total_quizzes = attempts.count()
+        profile, _ = UserProfile.objects.get_or_create(user=user)
         
-        # Calculate average score
-        if total_quizzes > 0:
-            total_percentage = 0
-            for attempt in attempts:
-                if attempt.total_questions > 0:
-                    total_percentage += (attempt.score / attempt.total_questions) * 100
-            average_score = round(total_percentage / total_quizzes)
+        # Calculate stats
+        total_quizzes = QuizAttempt.objects.filter(user=user).count()
+        if total_quizzes == 0:
+            # Fallback to unique questions answered if quiz attempts are not fully logged
+            total_quizzes = max(0, UserAnswer.objects.filter(user=user).count() // 10)
+        
+        # Calculate average score directly from UserAnswer for accuracy
+        total_answers = UserAnswer.objects.filter(user=user).count()
+        if total_answers > 0:
+            correct_answers = UserAnswer.objects.filter(user=user, is_correct=True).count()
+            average_score = int((correct_answers / total_answers) * 100)
         else:
             average_score = 0
             
-        # Calculate streak
-        streak_days = 0
-        if total_quizzes > 0:
-            # Get distinct dates of activity
-            dates = attempts.dates('completed_at', 'day', order='DESC')
-            
-            if dates:
-                today = timezone.now().date()
-                
-                # Check if the most recent activity was today or yesterday
-                last_active = dates[0]
-                
-                if last_active == today:
-                    streak_days = 1
-                    expected_date = today - datetime.timedelta(days=1)
-                elif last_active == today - datetime.timedelta(days=1):
-                    streak_days = 1
-                    expected_date = today - datetime.timedelta(days=2)
-                else:
-                    streak_days = 0
-                    expected_date = None
-                
-                if streak_days > 0:
-                    # Iterate through the rest of the dates
-                    for d in dates:
-                        if d == last_active:
-                            continue
-                        
-                        if d == expected_date:
-                            streak_days += 1
-                            expected_date -= datetime.timedelta(days=1)
-                        else:
-                            # Gap found
-                            break
+        # Get global streak
+        streak_obj = UserStreak.objects.filter(user=user, topic__isnull=True).first()
+        streak_days = streak_obj.streak if streak_obj else 0
         
-        # Get or create user profile data
         profile_data = {
             'username': user.username,
             'email': user.email,
             'first_name': user.first_name,
             'last_name': user.last_name,
-            'bio': getattr(user, 'bio', ''),
+            'bio': profile.bio,
             'total_quizzes': total_quizzes,
             'average_score': average_score,
             'streak_days': streak_days,
@@ -1528,11 +1669,31 @@ def user_profile(request):
         return Response(profile_data)
     
     elif request.method == 'PUT':
-        # Update bio
-        bio = request.data.get('bio', '')
-        # In a real app, save this to a UserProfile model
-        # For now, we'll just acknowledge it
-        return Response({'status': 'success', 'message': 'Profile updated'})
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        
+        if 'bio' in request.data:
+            profile.bio = request.data.get('bio', '')
+            profile.save()
+            
+        if 'first_name' in request.data:
+            user.first_name = request.data.get('first_name')
+        if 'last_name' in request.data:
+            user.last_name = request.data.get('last_name')
+        if 'email' in request.data:
+            user.email = request.data.get('email')
+            
+        user.save()
+        
+        return Response({
+            'status': 'success', 
+            'message': 'Profile updated successfully',
+            'user': {
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'email': user.email,
+                'bio': profile.bio
+            }
+        })
 
 
 
@@ -1572,6 +1733,99 @@ class LectureNoteDetailView(generics.RetrieveDestroyAPIView):
         data['questions'] = question_serializer.data
         
         return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def generate_lecture_study_aids(request, note_id):
+    """
+    POST /api/lectures/<id>/generate-study-aids/
+    Generate AI-powered study notes, formulas, and key points from lecture content.
+    Persists results on the LectureNote model.
+    """
+    try:
+        note = get_object_or_404(LectureNote, id=note_id, user=request.user)
+        content = note.content or ""
+
+        if not content.strip():
+            return Response({"error": "Lecture has no text content to analyze."}, status=400)
+
+        prompt = f"""You are an expert educational AI. Analyze the following lecture content and produce structured study aids.
+
+Lecture Title: {note.title}
+
+Content:
+\"\"\"{content[:8000]}\"\"\"
+
+Return a SINGLE valid JSON object with exactly these keys:
+{{
+  "study_notes": "# Study Notes\\n\\nA comprehensive markdown-formatted set of notes covering all major topics in the lecture. Use headers (##, ###), bullet points, bold for key terms. Write at least 400 words.",
+  "formulas": [
+    {{
+      "name": "Formula or concept name",
+      "formula": "The formula, definition, or rule (use LaTeX-style notation where applicable, e.g. $E = mc^2$)",
+      "description": "Brief explanation of when/how to apply this formula or concept"
+    }}
+  ],
+  "key_points": [
+    "Concise key point 1",
+    "Concise key point 2",
+    "..."
+  ]
+}}
+
+Requirements:
+- study_notes: Rich markdown text covering all major topics, definitions, examples. Use ## for sections, **bold** for terms.
+- formulas: List of 5-15 important formulas, equations, rules, or definitions from the lecture. If no mathematical formulas, list important conceptual rules/laws.
+- key_points: List of 8-15 bullet-point summaries that a student should memorize.
+- Return ONLY valid JSON, no markdown code blocks or extra text.
+"""
+
+        # Generate study aids via Gemini
+        try:
+            output_text = generate_ai_content(prompt)
+            if not output_text or not output_text.strip():
+                return Response({"error": "AI returned empty response. Please try again."}, status=500)
+        except Exception as e:
+            return Response({"error": f"AI generation failed: {str(e)}"}, status=500)
+
+        # Parse response
+        cleaned = output_text.strip().replace("```json", "").replace("```", "").strip()
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        if start != -1 and end != -1:
+            cleaned = cleaned[start:end+1]
+
+        data = json.loads(cleaned)
+
+        # Validate and normalize
+        study_notes = data.get("study_notes", "")
+        formulas = data.get("formulas", [])
+        key_points = data.get("key_points", [])
+
+        if not isinstance(formulas, list):
+            formulas = []
+        if not isinstance(key_points, list):
+            key_points = []
+
+        # Persist to DB
+        note.study_notes = study_notes
+        note.formulas = formulas
+        note.key_points = key_points
+        note.save(update_fields=["study_notes", "formulas", "key_points"])
+
+        return Response({
+            "success": True,
+            "study_notes": study_notes,
+            "formulas": formulas,
+            "key_points": key_points,
+        })
+
+    except json.JSONDecodeError as e:
+        return Response({"error": "Failed to parse AI response", "details": str(e)}, status=500)
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)
 
 
 @api_view(['PUT'])
@@ -1671,10 +1925,20 @@ def generate_flashcards(request):
         # Clean JSON
         # Clean JSON with Regex
         import re
-        cleaned = text.strip().replace("```json", "").replace("```", "").strip()
-        m = re.search(r'\[.*\]', cleaned, flags=re.DOTALL)
-        if m:
-            cleaned = m.group(0)
+        cleaned = text.strip()
+        
+        # Try finding the first '[' and last ']'
+        start_idx = cleaned.find('[')
+        end_idx = cleaned.rfind(']')
+        
+        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+            cleaned = cleaned[start_idx:end_idx+1]
+        else:
+            # Fallback regex if manual slicing fails
+            cleaned = cleaned.replace("```json", "").replace("```", "").strip()
+            m = re.search(r'\[.*\]', cleaned, flags=re.DOTALL)
+            if m:
+                cleaned = m.group(0)
             
         flashcards = json.loads(cleaned)
         
@@ -1752,11 +2016,21 @@ Requirements:
         
         # Clean up markdown code blocks if present
         import re
-        cleaned = raw_text.replace("```json", "").replace("```", "").strip()
-        # Regex find the main object
-        m = re.search(r'\{.*\}', cleaned, flags=re.DOTALL)
-        if m:
-            cleaned = m.group(0)
+        cleaned = raw_text.strip()
+        
+        # Try finding the first '{' and last '}'
+        start_idx = cleaned.find('{')
+        end_idx = cleaned.rfind('}')
+        
+        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+            cleaned = cleaned[start_idx:end_idx+1]
+        else:
+            # Fallback regex if manual slicing fails
+            cleaned = cleaned.replace("```json", "").replace("```", "").strip()
+            # Regex find the main object
+            m = re.search(r'\{.*\}', cleaned, flags=re.DOTALL)
+            if m:
+                cleaned = m.group(0)
         
         try:
             summary_data = json.loads(cleaned)
@@ -1816,3 +2090,378 @@ def generate_video_explanation(request):
         return Response(result, status=500)
         
     return Response(result)
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_dashboard_stats(request):
+    """
+    Returns aggregated statistics for the user dashboard.
+    """
+    try:
+        user = request.user
+        
+        # 1. Total Study Time (Seconds)
+        # Sum of time taken in quizzes (UserAnswer)
+        total_quiz_seconds = UserAnswer.objects.filter(user=user).aggregate(ModelsSum('time_taken'))['time_taken__sum'] or 0
+        
+        # Heuristic: Add 15 mins (900s) for each lecture note uploaded/read
+        notes_count = LectureNote.objects.filter(user=user).count()
+        total_reading_seconds = notes_count * 900
+        
+        total_seconds = total_quiz_seconds + total_reading_seconds
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        study_time_str = f"{hours}h {minutes}m"
+
+        # 2. Questions Answered
+        questions_answered = UserAnswer.objects.filter(user=user).count()
+        
+        # 3. Topics Mastered (mastery > 0.8)
+        topics_mastered = TopicMastery.objects.filter(user=user, mastery__gt=0.8).count()
+        
+        # 4. Avg Quiz Score
+        # Calculate from UserAnswer correctness
+        total_attempts = UserAnswer.objects.filter(user=user).count()
+        if total_attempts > 0:
+            correct_count = UserAnswer.objects.filter(user=user, is_correct=True).count()
+            avg_score = int((correct_count / total_attempts) * 100)
+        else:
+            avg_score = 0
+            
+        # 5. Streak
+        # Get GLOBAL streak
+        streak_obj = UserStreak.objects.filter(user=user, topic__isnull=True).first()
+        streak = streak_obj.streak if streak_obj else 0
+        
+        # 6. Subject Mastery (Aggregate by Topic for now as Subject isn't explicit)
+        # We will take top 4 topics
+        mastery_data = []
+        top_masteries = TopicMastery.objects.filter(user=user).order_by('-mastery')[:4]
+        for tm in top_masteries:
+            mastery_data.append({
+                "subject": tm.topic, # Using topic as subject
+                "percentage": int(tm.mastery * 100),
+                "color": "#137fec" # Default, frontend can rotate
+            })
+            
+        # 7. Weak Topics
+        weak_topics = []
+        weakness_objs = TopicWeakness.objects.filter(user=user).order_by('-weakness_score')[:3]
+        for w in weakness_objs:
+             weak_topics.append({
+                 "topic": w.topic,
+                 "subject": w.lecture_note.title if w.lecture_note else "General",
+                 "note_id": w.lecture_note.id if w.lecture_note else None,
+                 "accuracy": max(0, 100 - int(w.weakness_score * 20)) # Heuristic accuracy inverse to weakness
+             })
+             
+        # 8. Recent Activity
+        recent_activity = []
+        # Last 2 answers
+        last_answers = UserAnswer.objects.filter(user=user).order_by('-answered_at')[:2]
+        for ans in last_answers:
+             recent_activity.append({
+                 "type": "quiz",
+                 "text": f"Practiced {ans.question.topic or 'General'}",
+                 "subtext": f"{'Correct' if ans.is_correct else 'Incorrect'} Answer • {ans.answered_at.strftime('%H:%M')}"
+             })
+        
+        # Last upload
+        last_upload = LectureNote.objects.filter(user=user).order_by('-created_at').first()
+        if last_upload:
+             recent_activity.append({
+                 "type": "upload",
+                 "text": f"Uploaded \"{last_upload.title}\"",
+                 "subtext": f"Processed • {last_upload.created_at.strftime('%H:%M')}"
+             })
+
+        return Response({
+            "study_time": study_time_str,
+            "questions_answered": questions_answered,
+            "topics_mastered": topics_mastered,
+            "avg_score": avg_score,
+            "streak": streak,
+            "mastery_data": mastery_data,
+            "weak_topics": weak_topics,
+            "recent_activity": recent_activity
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_lectures_by_topics(request):
+    """
+    Get lecture note IDs that contain the specified topics.
+    GET: ?topics=topic1,topic2,topic3
+    Returns: { "note_ids": [1, 2, 3] }
+    """
+    try:
+        user = request.user
+        topics_param = request.GET.get('topics', '')
+        
+        if not topics_param:
+            return Response({"error": "Topics parameter is required"}, status=400)
+        
+        topics = [t.strip() for t in topics_param.split(',') if t.strip()]
+        
+        if not topics:
+            return Response({"error": "No valid topics provided"}, status=400)
+        
+        # Find lecture notes that have questions related to these topics
+        # Using Q objects to search for any of the topics
+        query = Q()
+        for topic in topics:
+            query |= Q(question__topic__icontains=topic)
+        
+        # Get unique lecture note IDs
+        note_ids = LectureNote.objects.filter(
+            user=user
+        ).filter(query).distinct().values_list('id', flat=True)
+        
+        return Response({
+            "note_ids": list(note_ids),
+            "topics": topics
+        }, status=200)
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)
+
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def get_weak_topic_explanation(request):
+    """
+    Generate AI-powered explanation for a weak topic.
+    POST: { "topic": "topic_name", "subject": "subject_name" }
+    Returns: { "explanation": "...", "resources": [...], "practice_tips": [...] }
+    """
+    try:
+        user = request.user
+        topic = request.data.get('topic')
+        subject = request.data.get('subject', 'General')
+        
+        if not topic:
+            return Response({"error": "Topic is required"}, status=400)
+        
+        # Get topic weakness data for context
+        weakness = TopicWeakness.objects.filter(user=user, topic=topic).first()
+        mastery = TopicMastery.objects.filter(user=user, topic=topic).first()
+        
+        # Build context for AI
+        context = f"Topic: {topic}\nSubject: {subject}\n"
+        if weakness:
+            context += f"Weakness Score: {weakness.weakness_score}\n"
+        if mastery:
+            context += f"Current Mastery: {int(mastery.mastery * 100)}%\n"
+        
+        # Ultra-optimized prompt for fastest response (2-3 seconds)
+        prompt = f"""Explain {topic} for a student. Return JSON:
+{{"explanation":"2 sentences with example","key_concepts":["3 concepts"],"practice_tips":["3 tips"]}}"""
+        
+        
+        
+        try:
+            # Use centralized AI utility
+            raw_text = generate_ai_content(prompt).strip()
+            
+            # Clean up markdown code blocks if present
+            import re
+            cleaned = raw_text.replace("```json", "").replace("```", "").strip()
+            # Regex find the main object
+            m = re.search(r'\{.*\}', cleaned, flags=re.DOTALL)
+            if m:
+                cleaned = m.group(0)
+            
+            explanation_data = json.loads(cleaned)
+            
+            # Validate required fields (simplified structure)
+            required_fields = ['explanation', 'key_concepts', 'practice_tips']
+            for field in required_fields:
+                if field not in explanation_data:
+                    explanation_data[field] = [] if field in ['key_concepts', 'practice_tips'] else ""
+            
+            
+            return Response({
+                "topic": topic,
+                "subject": subject,
+                "data": explanation_data
+            }, status=200)
+            
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing error: {e}")
+            print(f"Raw response: {raw_text[:500]}")
+            return Response({
+                "error": "Failed to parse AI response",
+                "raw_response": raw_text[:500]
+            }, status=500)
+            
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)
+
+
+
+@api_view(['GET', 'PUT'])
+@permission_classes([permissions.IsAuthenticated])
+def user_profile(request):
+    """
+    GET: Retrieve user profile with stats
+    PUT: Update user profile fields
+    """
+    user = request.user
+    
+    # Get or create profile
+    profile, created = UserProfile.objects.get_or_create(user=user)
+    
+    if request.method == 'GET':
+        try:
+            # Calculate stats
+            quiz_attempts = QuizAttempt.objects.filter(user=user)
+            total_quizzes = quiz_attempts.count()
+            
+            if total_quizzes > 0:
+                average_score = quiz_attempts.aggregate(
+                    avg=Avg(models.F('score') * 100.0 / models.F('total_questions'))
+                )['avg'] or 0
+            else:
+                average_score = 0
+            
+            # Get streak
+            global_streak = UserStreak.objects.filter(user=user, topic__isnull=True).first()
+            streak_days = global_streak.streak if global_streak else 0
+            
+            return Response({
+                'bio': profile.bio or '',
+                'school': profile.school or '',
+                'grade': profile.grade or '',
+                'subjects': profile.subjects or [],
+                'preferences': profile.preferences or {},
+                'total_quizzes': total_quizzes,
+                'average_score': round(average_score, 1),
+                'streak_days': streak_days
+            })
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+    
+    elif request.method == 'PUT':
+        try:
+            data = request.data
+            
+            # Update profile fields
+            if 'bio' in data:
+                profile.bio = data['bio']
+            if 'school' in data:
+                profile.school = data['school']
+            if 'grade' in data:
+                profile.grade = data['grade']
+            if 'subjects' in data:
+                profile.subjects = data['subjects']
+            if 'preferences' in data:
+                profile.preferences = data['preferences']
+            
+            profile.save()
+            
+            return Response({
+                'message': 'Profile updated successfully',
+                'bio': profile.bio,
+                'school': profile.school,
+                'grade': profile.grade,
+                'subjects': profile.subjects,
+                'preferences': profile.preferences
+            })
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STICKY NOTES CRUD
+# ─────────────────────────────────────────────────────────────────────────────
+
+@api_view(['GET', 'POST'])
+@permission_classes([permissions.IsAuthenticated])
+def sticky_notes(request):
+    """
+    GET  /api/sticky-notes/?lecture_id=<id>   — list sticky notes (optionally filtered by lecture)
+    POST /api/sticky-notes/                    — create a new sticky note
+    Body: { "title": "...", "content": "...", "color": "#FFF9C4", "lecture_note_id": <optional> }
+    """
+    user = request.user
+
+    if request.method == 'GET':
+        lecture_id = request.query_params.get('lecture_id')
+        qs = StickyNote.objects.filter(user=user)
+        if lecture_id:
+            qs = qs.filter(lecture_note_id=lecture_id)
+        data = [{
+            'id': n.id,
+            'title': n.title,
+            'content': n.content,
+            'color': n.color,
+            'lecture_note_id': n.lecture_note_id,
+            'created_at': n.created_at.isoformat(),
+            'updated_at': n.updated_at.isoformat(),
+        } for n in qs]
+        return Response(data)
+
+    elif request.method == 'POST':
+        title = request.data.get('title', 'Class Note').strip() or 'Class Note'
+        content = request.data.get('content', '')
+        color = request.data.get('color', '#FFF9C4')
+        lecture_note_id = request.data.get('lecture_note_id')
+
+        note = StickyNote.objects.create(
+            user=user,
+            title=title,
+            content=content,
+            color=color,
+            lecture_note_id=lecture_note_id if lecture_note_id else None
+        )
+        return Response({
+            'id': note.id,
+            'title': note.title,
+            'content': note.content,
+            'color': note.color,
+            'lecture_note_id': note.lecture_note_id,
+            'created_at': note.created_at.isoformat(),
+            'updated_at': note.updated_at.isoformat(),
+        }, status=201)
+
+
+@api_view(['PUT', 'DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def sticky_note_detail(request, note_id):
+    """
+    PUT    /api/sticky-notes/<id>/  — update title, content, or color
+    DELETE /api/sticky-notes/<id>/  — delete sticky note
+    """
+    note = get_object_or_404(StickyNote, id=note_id, user=request.user)
+
+    if request.method == 'PUT':
+        if 'title' in request.data:
+            note.title = request.data['title'].strip() or 'Class Note'
+        if 'content' in request.data:
+            note.content = request.data['content']
+        if 'color' in request.data:
+            note.color = request.data['color']
+        note.save()
+        return Response({
+            'id': note.id,
+            'title': note.title,
+            'content': note.content,
+            'color': note.color,
+            'lecture_note_id': note.lecture_note_id,
+            'updated_at': note.updated_at.isoformat(),
+        })
+
+    elif request.method == 'DELETE':
+        note.delete()
+        return Response({'message': 'Deleted successfully'}, status=200)

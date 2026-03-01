@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lecture Summary Overview</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700;900&amp;family=Noto+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                        "card-dark": "#182430", // Slightly lighter than background-dark for cards
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #324d67; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<!-- Side Navigation -->
+<aside class="hidden md:flex flex-col w-72 h-full bg-white dark:bg-card-dark border-r border-slate-200 dark:border-[#233648] shrink-0">
+<div class="flex flex-col justify-between h-full p-4">
+<div class="flex flex-col gap-6">
+<!-- User/Course Profile -->
+<div class="flex gap-3 items-center px-2">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-12 shrink-0 border-2 border-slate-200 dark:border-[#324d67]" data-alt="Professor profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC3lFQ7v6EPsEyPy_ZXhoZpTzBdDaR47pHF5WL-PMmGuNFqscGq1H_cIokXfdqk1zxAsexL5ADwV7QojslaC5llghfPuAeplsmX35nzyq9h26OfKX50w2jjubHHLuYj1VcYcJXYk_9QBS92bPuJu-YgZ5YdhPUUtmz9gFmCTknizAoBj8i3kpmfesDtaSz3rBZfPonEzHV252fRoma9q5d_-CxQGTD-61GmSK_-yvpqP4ByOD60p2LSwKvyKUIq-oWoAdbZZ_2YBhQ");'></div>
+<div class="flex flex-col min-w-0">
+<h1 class="text-slate-900 dark:text-white text-base font-bold leading-normal truncate">Neuroscience 101</h1>
+<p class="text-slate-500 dark:text-[#92adc9] text-sm font-normal leading-normal truncate">Prof. H. Zoidberg</p>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-[#92adc9] hover:bg-slate-100 dark:hover:bg-[#233648] transition-colors group" href="#">
+<span class="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary dark:bg-[#233648] dark:text-white" href="#">
+<span class="material-symbols-outlined text-2xl fill-1">calendar_month</span>
+<span class="text-sm font-medium">Study Plans</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-[#92adc9] hover:bg-slate-100 dark:hover:bg-[#233648] transition-colors group" href="#">
+<span class="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">school</span>
+<span class="text-sm font-medium">Exam Prep</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-[#92adc9] hover:bg-slate-100 dark:hover:bg-[#233648] transition-colors group" href="#">
+<span class="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">psychology</span>
+<span class="text-sm font-medium">Question Generator</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-[#92adc9] hover:bg-slate-100 dark:hover:bg-[#233648] transition-colors group" href="#">
+<span class="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+</div>
+<button class="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg h-11 px-4 bg-primary text-white hover:bg-blue-600 transition-colors">
+<span class="material-symbols-outlined text-xl">add</span>
+<span class="text-sm font-bold tracking-wide">New Study Session</span>
+</button>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col h-full overflow-hidden relative">
+<!-- Mobile Header Placeholder -->
+<div class="md:hidden flex items-center justify-between p-4 bg-white dark:bg-card-dark border-b border-slate-200 dark:border-[#233648]">
+<span class="text-lg font-bold dark:text-white">Neuroscience 101</span>
+<button class="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-[#233648]">
+<span class="material-symbols-outlined dark:text-white">menu</span>
+</button>
+</div>
+<!-- Scrollable Area -->
+<div class="flex-1 overflow-y-auto p-4 md:p-8 lg:px-12">
+<div class="max-w-5xl mx-auto flex flex-col gap-8 pb-12">
+<!-- Page Heading & Actions -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-2 mb-1">
+<span class="bg-primary/20 text-primary text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">Lecture 4</span>
+<span class="text-slate-500 dark:text-[#92adc9] text-xs font-medium">• Oct 24, 2023</span>
+</div>
+<h2 class="text-3xl md:text-4xl font-black leading-tight tracking-tight text-slate-900 dark:text-white">Introduction to Neural Networks</h2>
+<div class="flex items-center gap-2 text-slate-500 dark:text-[#92adc9] text-sm md:text-base">
+<span class="material-symbols-outlined text-[20px]">schedule</span>
+<span>45 mins</span>
+<span class="mx-2">•</span>
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+<span>Completed</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-3">
+<button class="flex items-center gap-2 h-10 px-4 rounded-lg bg-white dark:bg-[#233648] border border-slate-200 dark:border-transparent text-slate-700 dark:text-white text-sm font-bold hover:bg-slate-50 dark:hover:bg-[#324d67] transition-colors">
+<span class="material-symbols-outlined text-lg">download</span>
+<span>PDF</span>
+</button>
+<button class="flex items-center gap-2 h-10 px-4 rounded-lg bg-white dark:bg-[#233648] border border-slate-200 dark:border-transparent text-slate-700 dark:text-white text-sm font-bold hover:bg-slate-50 dark:hover:bg-[#324d67] transition-colors">
+<span class="material-symbols-outlined text-lg">style</span>
+<span>Flashcards</span>
+</button>
+<button class="flex items-center gap-2 h-10 px-6 rounded-lg bg-primary text-white text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-colors">
+<span class="material-symbols-outlined text-lg">auto_awesome</span>
+<span>Generate Quiz</span>
+</button>
+</div>
+</div>
+<!-- Overview Card -->
+<div class="rounded-xl overflow-hidden relative shadow-md group">
+<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-10"></div>
+<div class="w-full h-64 md:h-80 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="Abstract visualization of neural network connections glowing blue" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBb6KwOVTyIkaudeZDr_f4SsgU6Oo_7NAnUcXR-w6I-sVw7GLKeIJy6M6leS2rJES03J_w7swuF7NkHpDFB25J6vaWzkfo75ULSn-kMpU7_ySiwLpNQsSNmpstyXi9C92FOVnC2P5mlVmtqBHtpUIxrJt8dvVEKUrDfL5IGKLZztEKHPH7Hx9D98QlMzjvCVbu-RVOI2eAZXdRrfXU5eVZdHhEgwTSveCxKFVh0t5EGt9yqUoHuLWhKmuaC84GF8M8IAkk8WxRSKGk");'>
+</div>
+<div class="absolute bottom-0 left-0 right-0 p-6 md:p-8 z-20 flex flex-col gap-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">info</span>
+<p class="text-white/90 text-sm font-bold uppercase tracking-widest">Overview</p>
+</div>
+<p class="text-white text-lg md:text-xl font-medium leading-relaxed max-w-3xl">
+                                This lecture covers the fundamental architecture of neural networks, including perceptrons, activation functions, and backpropagation algorithms. It establishes the mathematical foundation for understanding how machines 'learn' from data by adjusting weights and biases through iterative training.
+                            </p>
+</div>
+</div>
+<!-- Two Column Layout: Key Points & Visuals -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Left Column: Key Takeaways -->
+<div class="lg:col-span-5 flex flex-col gap-6">
+<div class="bg-white dark:bg-card-dark rounded-xl p-6 shadow-sm border border-slate-200 dark:border-[#233648]">
+<h3 class="text-xl font-bold mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
+<span class="material-symbols-outlined text-primary">checklist</span>
+                                    Key Takeaways
+                                </h3>
+<div class="flex flex-col gap-3">
+<label class="flex gap-x-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-[#233648] transition-colors cursor-pointer group">
+<div class="relative flex items-center">
+<input checked="" class="peer h-5 w-5 cursor-pointer appearance-none rounded border-2 border-slate-300 dark:border-[#324d67] bg-transparent checked:bg-primary checked:border-primary transition-all" type="checkbox"/>
+<span class="material-symbols-outlined absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none text-[16px] left-[2px] top-[2px]">check</span>
+</div>
+<p class="text-slate-700 dark:text-slate-300 text-sm font-medium leading-snug group-hover:text-primary transition-colors">
+                                            The role of weights and biases in modifying signal strength.
+                                        </p>
+</label>
+<label class="flex gap-x-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-[#233648] transition-colors cursor-pointer group">
+<div class="relative flex items-center">
+<input class="peer h-5 w-5 cursor-pointer appearance-none rounded border-2 border-slate-300 dark:border-[#324d67] bg-transparent checked:bg-primary checked:border-primary transition-all" type="checkbox"/>
+<span class="material-symbols-outlined absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none text-[16px] left-[2px] top-[2px]">check</span>
+</div>
+<div class="flex flex-col gap-1">
+<p class="text-slate-700 dark:text-slate-300 text-sm font-medium leading-snug group-hover:text-primary transition-colors">
+                                                Understanding Sigmoid vs. ReLU activation functions.
+                                            </p>
+<div class="flex items-center gap-1 text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded w-fit">
+<span class="material-symbols-outlined text-[14px]">warning</span>
+<span class="text-[10px] font-bold uppercase tracking-wide">Needs Review</span>
+</div>
+</div>
+</label>
+<label class="flex gap-x-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-[#233648] transition-colors cursor-pointer group">
+<div class="relative flex items-center">
+<input class="peer h-5 w-5 cursor-pointer appearance-none rounded border-2 border-slate-300 dark:border-[#324d67] bg-transparent checked:bg-primary checked:border-primary transition-all" type="checkbox"/>
+<span class="material-symbols-outlined absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none text-[16px] left-[2px] top-[2px]">check</span>
+</div>
+<p class="text-slate-700 dark:text-slate-300 text-sm font-medium leading-snug group-hover:text-primary transition-colors">
+                                            The mathematics behind gradient descent and error minimization.
+                                        </p>
+</label>
+<label class="flex gap-x-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-[#233648] transition-colors cursor-pointer group">
+<div class="relative flex items-center">
+<input class="peer h-5 w-5 cursor-pointer appearance-none rounded border-2 border-slate-300 dark:border-[#324d67] bg-transparent checked:bg-primary checked:border-primary transition-all" type="checkbox"/>
+<span class="material-symbols-outlined absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none text-[16px] left-[2px] top-[2px]">check</span>
+</div>
+<p class="text-slate-700 dark:text-slate-300 text-sm font-medium leading-snug group-hover:text-primary transition-colors">
+                                            Feedforward propagation mechanism.
+                                        </p>
+</label>
+</div>
+</div>
+<!-- Term Definitions -->
+<div class="bg-white dark:bg-card-dark rounded-xl p-6 shadow-sm border border-slate-200 dark:border-[#233648]">
+<h3 class="text-xl font-bold mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
+<span class="material-symbols-outlined text-primary">book_2</span>
+                                    Vocabulary
+                                </h3>
+<div class="divide-y divide-slate-100 dark:divide-[#324d67]">
+<div class="py-3 first:pt-0">
+<p class="text-primary font-bold text-sm mb-1">Perceptron</p>
+<p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                                            The simplest type of artificial neural network. It is a linear classifier (binary).
+                                        </p>
+</div>
+<div class="py-3">
+<p class="text-primary font-bold text-sm mb-1">Epoch</p>
+<p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                                            One complete pass of the training dataset through the algorithm.
+                                        </p>
+</div>
+<div class="py-3 last:pb-0">
+<p class="text-primary font-bold text-sm mb-1">Backpropagation</p>
+<p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                                            A widely used algorithm for training feedforward neural networks by computing the gradient of the loss function.
+                                        </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Flowchart/Visuals -->
+<div class="lg:col-span-7">
+<div class="bg-white dark:bg-card-dark rounded-xl shadow-sm border border-slate-200 dark:border-[#233648] h-full flex flex-col">
+<div class="p-6 border-b border-slate-200 dark:border-[#233648] flex justify-between items-center">
+<h3 class="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+<span class="material-symbols-outlined text-primary">account_tree</span>
+                                        Process Visualization
+                                    </h3>
+<div class="flex gap-2">
+<button class="p-1.5 rounded bg-slate-100 dark:bg-[#233648] text-slate-500 dark:text-[#92adc9] hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">zoom_in</span>
+</button>
+<button class="p-1.5 rounded bg-slate-100 dark:bg-[#233648] text-slate-500 dark:text-[#92adc9] hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">fullscreen</span>
+</button>
+</div>
+</div>
+<div class="flex-1 min-h-[400px] relative bg-slate-50 dark:bg-[#111a22] m-2 rounded-lg overflow-hidden border border-slate-100 dark:border-[#233648] flex items-center justify-center">
+<!-- Grid Background -->
+<div class="absolute inset-0 opacity-10 dark:opacity-5" style="background-image: radial-gradient(#64748b 1px, transparent 1px); background-size: 20px 20px;">
+</div>
+<!-- Flowchart Mockup -->
+<div class="relative z-10 flex items-center gap-8 md:gap-12">
+<!-- Input Layer -->
+<div class="flex flex-col gap-4">
+<div class="w-12 h-12 rounded-full border-2 border-primary bg-white dark:bg-[#233648] flex items-center justify-center shadow-lg relative">
+<span class="text-xs font-bold text-slate-500">x1</span>
+<!-- Connectors -->
+<div class="absolute w-12 h-0.5 bg-slate-300 dark:bg-slate-700 left-full top-1/2 transform rotate-12 origin-left"></div>
+<div class="absolute w-12 h-0.5 bg-slate-300 dark:bg-slate-700 left-full top-1/2 transform -rotate-12 origin-left"></div>
+</div>
+<div class="w-12 h-12 rounded-full border-2 border-primary bg-white dark:bg-[#233648] flex items-center justify-center shadow-lg relative">
+<span class="text-xs font-bold text-slate-500">x2</span>
+<div class="absolute w-12 h-0.5 bg-slate-300 dark:bg-slate-700 left-full top-1/2 transform rotate-6 origin-left"></div>
+<div class="absolute w-12 h-0.5 bg-slate-300 dark:bg-slate-700 left-full top-1/2 transform -rotate-6 origin-left"></div>
+</div>
+<div class="w-12 h-12 rounded-full border-2 border-primary bg-white dark:bg-[#233648] flex items-center justify-center shadow-lg relative">
+<span class="text-xs font-bold text-slate-500">x3</span>
+<div class="absolute w-12 h-0.5 bg-slate-300 dark:bg-slate-700 left-full top-1/2 transform -rotate-12 origin-left"></div>
+</div>
+<p class="text-center text-xs font-medium text-slate-400 mt-2 uppercase tracking-widest">Input</p>
+</div>
+<!-- Hidden Layer -->
+<div class="flex flex-col gap-4 mt-8">
+<div class="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-blue-500/30 relative z-20">
+<span class="material-symbols-outlined text-white text-lg">settings</span>
+<div class="absolute w-12 h-0.5 bg-primary/50 left-full top-1/2 transform rotate-6 origin-left"></div>
+<div class="absolute w-12 h-0.5 bg-primary/50 left-full top-1/2 transform -rotate-6 origin-left"></div>
+</div>
+<div class="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-blue-500/30 relative z-20">
+<span class="material-symbols-outlined text-white text-lg">settings</span>
+<div class="absolute w-12 h-0.5 bg-primary/50 left-full top-1/2 transform rotate-0 origin-left"></div>
+</div>
+<div class="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-blue-500/30 relative z-20">
+<span class="material-symbols-outlined text-white text-lg">settings</span>
+<div class="absolute w-12 h-0.5 bg-primary/50 left-full top-1/2 transform -rotate-6 origin-left"></div>
+</div>
+<div class="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-blue-500/30 relative z-20">
+<span class="material-symbols-outlined text-white text-lg">settings</span>
+</div>
+<p class="text-center text-xs font-medium text-slate-400 mt-2 uppercase tracking-widest">Hidden</p>
+</div>
+<!-- Output Layer -->
+<div class="flex flex-col gap-4">
+<div class="w-16 h-16 rounded-full border-4 border-green-500 bg-white dark:bg-[#233648] flex items-center justify-center shadow-xl shadow-green-500/20">
+<span class="text-sm font-bold dark:text-white">Output</span>
+</div>
+<p class="text-center text-xs font-medium text-slate-400 mt-2 uppercase tracking-widest">Result</p>
+</div>
+</div>
+<!-- Legend Overlay -->
+<div class="absolute bottom-4 right-4 bg-white/90 dark:bg-black/50 backdrop-blur-sm p-3 rounded-lg border border-slate-200 dark:border-[#324d67] text-xs">
+<div class="flex items-center gap-2 mb-1">
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+<span class="text-slate-600 dark:text-slate-300">Neuron (Active)</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-0.5 bg-slate-400"></div>
+<span class="text-slate-600 dark:text-slate-300">Synapse Weight</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

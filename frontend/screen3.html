@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AI Exam Strategy Roadmap</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Lexend', sans-serif; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-primary/20 px-10 py-3 bg-background-light dark:bg-background-dark sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4 text-primary">
+<div class="size-8 flex items-center justify-center bg-primary/10 rounded-lg">
+<span class="material-symbols-outlined text-primary">auto_awesome</span>
+</div>
+<h2 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-[-0.015em]">AI Exam Strategist</h2>
+</div>
+<label class="flex flex-col min-w-40 !h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-slate-400 flex border-none bg-slate-100 dark:bg-primary/10 items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-slate-900 dark:text-slate-100 focus:outline-0 focus:ring-0 border-none bg-slate-100 dark:bg-primary/10 focus:border-none h-full placeholder:text-slate-400 px-4 rounded-l-none border-l-0 pl-2 text-base font-normal" placeholder="Search topics..."/>
+</div>
+</label>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<nav class="flex items-center gap-9">
+<a class="text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-primary text-sm font-medium leading-normal" href="#">Dashboard</a>
+<a class="text-primary text-sm font-bold leading-normal border-b-2 border-primary" href="#">Study Plans</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-primary text-sm font-medium leading-normal" href="#">Mock Exams</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-primary text-sm font-medium leading-normal" href="#">Reports</a>
+</nav>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Upgrade Pro</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 ring-2 ring-primary/20" data-alt="Student profile avatar portrait" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAug-TJ9SKZ2tpl1VBhaP5g1q8R7FeZZ90muGteO8kYAHLmMCfo40ZkXr0aK9Xci8yoD-ZYeRMD44zM6_T_kJrAc6cGpjNrPQr_75yc4PctJZ_rGoPHzQOfglEEAtu4G9OkGPTe_ZWAdVLsa-cql9JxXY3uP8HBUCGIuoMQgXh5XpQFIe1ZZMbbu2fOfaCKACtcA3QFL_9zrUEkb2KBQWELGIKD2XgFFzVr-1hGxZpFqHquRKQ0SUS45He05fzxAceExrKBguLXBbs");'></div>
+</div>
+</header>
+<main class="flex flex-1 gap-6 p-10 max-w-[1440px] mx-auto w-full">
+<aside class="w-64 flex flex-col gap-6 shrink-0">
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-primary/5 cursor-pointer text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined">dashboard</span>
+<p class="text-sm font-medium">Overview</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary cursor-pointer">
+<span class="material-symbols-outlined">map</span>
+<p class="text-sm font-medium">Roadmap Generator</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-primary/5 cursor-pointer text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined">menu_book</span>
+<p class="text-sm font-medium">Subject Library</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-primary/5 cursor-pointer text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-sm font-medium">Preferences</p>
+</div>
+</div>
+<div class="bg-slate-100 dark:bg-primary/5 p-6 rounded-xl border border-slate-200 dark:border-primary/10 mt-auto">
+<div class="relative flex flex-col items-center justify-center py-4">
+<div class="size-32 rounded-full border-[10px] border-slate-200 dark:border-slate-800 flex items-center justify-center relative">
+<svg class="absolute inset-0 size-full -rotate-90">
+<circle class="text-primary" cx="64" cy="64" fill="transparent" r="54" stroke="currentColor" stroke-dasharray="339.29" stroke-dashoffset="101.78" stroke-width="10"></circle>
+</svg>
+<div class="flex flex-col items-center">
+<span class="text-2xl font-black text-slate-900 dark:text-slate-100">70%</span>
+</div>
+</div>
+<h3 class="mt-4 text-sm font-bold text-slate-900 dark:text-slate-100">Readiness Score</h3>
+<p class="text-xs text-slate-500 text-center mt-1">Focus on Advanced Calculus to hit 85% by Sunday.</p>
+</div>
+</div>
+</aside>
+<div class="flex-1 flex flex-col gap-8">
+<section>
+<div class="mb-6">
+<h1 class="text-slate-900 dark:text-slate-100 text-3xl font-black leading-tight tracking-[-0.033em]">Exam Strategy Generator</h1>
+<p class="text-slate-500 dark:text-slate-400 text-base font-normal mt-1">Our AI analyzes 12,000+ past questions to prioritize your study plan.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-100 dark:bg-primary/5 p-6 rounded-xl border border-slate-200 dark:border-primary/10">
+<label class="flex flex-col gap-2">
+<span class="text-sm font-bold text-slate-700 dark:text-slate-300">Target Exam</span>
+<div class="relative">
+<select class="form-select w-full rounded-lg bg-background-light dark:bg-background-dark border-slate-200 dark:border-primary/20 text-slate-900 dark:text-slate-100 h-12">
+<option>MCAT - Biological Sciences</option>
+<option>LSAT - Logical Reasoning</option>
+<option>SAT - Math section</option>
+<option>Bar Exam - Criminal Law</option>
+</select>
+</div>
+</label>
+<label class="flex flex-col gap-2">
+<span class="text-sm font-bold text-slate-700 dark:text-slate-300">Exam Date</span>
+<input class="form-input w-full rounded-lg bg-background-light dark:bg-background-dark border-slate-200 dark:border-primary/20 text-slate-900 dark:text-slate-100 h-12 px-4" type="date" value="2023-12-15"/>
+</label>
+<label class="flex flex-col gap-2">
+<span class="text-sm font-bold text-slate-700 dark:text-slate-300">Daily Study Hours</span>
+<input class="form-input w-full rounded-lg bg-background-light dark:bg-background-dark border-slate-200 dark:border-primary/20 text-slate-900 dark:text-slate-100 h-12 px-4" type="number" value="4"/>
+</label>
+</div>
+</section>
+<section class="flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<h2 class="text-slate-900 dark:text-slate-100 text-xl font-bold">Your Day-by-Day Roadmap</h2>
+<button class="text-primary text-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">refresh</span> Re-optimize Roadmap
+                            </button>
+</div>
+<div class="space-y-4">
+<!-- Day 1 -->
+<div class="bg-background-light dark:bg-background-dark border border-slate-200 dark:border-primary/10 rounded-xl overflow-hidden">
+<div class="flex items-center gap-4 p-4 bg-slate-100 dark:bg-primary/5 border-b border-slate-200 dark:border-primary/10">
+<div class="size-10 rounded-lg bg-primary flex items-center justify-center text-white font-bold">01</div>
+<div class="flex-1">
+<h3 class="font-bold text-slate-900 dark:text-slate-100">Monday, Nov 27 - Foundation Reset</h3>
+<div class="flex items-center gap-4 mt-1">
+<div class="flex items-center gap-1 text-xs text-slate-500">
+<span class="material-symbols-outlined text-[14px]">schedule</span> 4 Hours
+                                            </div>
+<div class="flex items-center gap-1 text-xs text-orange-500 font-bold">
+<span class="material-symbols-outlined text-[14px]">trending_up</span> High Weightage
+                                            </div>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-slate-400">100% Complete</span>
+<span class="material-symbols-outlined text-green-500">check_circle</span>
+</div>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex items-center justify-between group cursor-pointer">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400">task_alt</span>
+<span class="text-sm">Organic Chemistry: Functional Groups Basics</span>
+</div>
+<span class="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-500 font-bold">60 min</span>
+</div>
+<div class="flex items-center justify-between group cursor-pointer">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400">task_alt</span>
+<span class="text-sm">Cell Biology: Metabolic Pathways</span>
+</div>
+<span class="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-500 font-bold">120 min</span>
+</div>
+</div>
+</div>
+<!-- Day 2 -->
+<div class="bg-background-light dark:bg-background-dark border border-slate-200 dark:border-primary/10 rounded-xl overflow-hidden ring-2 ring-primary">
+<div class="flex items-center gap-4 p-4 bg-primary/10 border-b border-primary/20">
+<div class="size-10 rounded-lg bg-primary flex items-center justify-center text-white font-bold">02</div>
+<div class="flex-1">
+<h3 class="font-bold text-slate-900 dark:text-slate-100">Today, Nov 28 - Quantitative Mastery</h3>
+<div class="flex items-center gap-4 mt-1">
+<div class="flex items-center gap-1 text-xs text-slate-500">
+<span class="material-symbols-outlined text-[14px]">schedule</span> 4.5 Hours
+                                            </div>
+<div class="flex items-center gap-1 text-xs text-primary font-bold">
+<span class="material-symbols-outlined text-[14px]">psychology</span> AI Recommended
+                                            </div>
+</div>
+</div>
+<div class="w-32 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-1/3"></div>
+</div>
+</div>
+<div class="p-4 space-y-4">
+<div class="flex flex-col gap-3 p-4 bg-primary/5 rounded-lg border border-primary/10">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">circle_notifications</span>
+<span class="text-sm font-bold text-slate-900 dark:text-slate-100">Physics: Fluid Dynamics &amp; Torque</span>
+</div>
+<span class="text-xs px-2 py-1 rounded bg-primary text-white font-bold">IN PROGRESS</span>
+</div>
+<p class="text-xs text-slate-500 ml-9">Pattern analysis shows this topic appears in 22% of exams. Your previous accuracy: 45%.</p>
+<div class="ml-9 flex gap-2">
+<button class="text-xs font-bold py-1 px-3 rounded bg-primary text-white">Resume Topic</button>
+<button class="text-xs font-bold py-1 px-3 rounded border border-slate-200 dark:border-primary/20">Watch Video</button>
+</div>
+</div>
+<div class="flex items-center justify-between px-4 group cursor-pointer opacity-60">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400">radio_button_unchecked</span>
+<span class="text-sm">Practice Quiz: 30 Questions - High Difficulty</span>
+</div>
+<span class="text-xs px-2 py-1 rounded bg-slate-500/10 text-slate-500 font-bold">45 min</span>
+</div>
+</div>
+</div>
+<!-- Day 3 -->
+<div class="bg-background-light dark:bg-background-dark border border-slate-200 dark:border-primary/10 rounded-xl overflow-hidden">
+<div class="flex items-center gap-4 p-4 bg-slate-100 dark:bg-primary/5 border-b border-slate-200 dark:border-primary/10">
+<div class="size-10 rounded-lg bg-slate-400 dark:bg-slate-700 flex items-center justify-center text-white font-bold">03</div>
+<div class="flex-1">
+<h3 class="font-bold text-slate-900 dark:text-slate-100">Wednesday, Nov 29 - Bio-Systems</h3>
+<div class="flex items-center gap-4 mt-1">
+<div class="flex items-center gap-1 text-xs text-slate-500">
+<span class="material-symbols-outlined text-[14px]">schedule</span> 3.5 Hours
+                                            </div>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400">lock</span>
+</div>
+<div class="p-4 space-y-3 opacity-50 select-none">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400">radio_button_unchecked</span>
+<span class="text-sm">Endocrine System &amp; Hormones</span>
+</div>
+<span class="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-500 font-bold">150 min</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<aside class="w-80 flex flex-col gap-6 shrink-0">
+<div class="bg-slate-900 border border-primary/20 rounded-xl p-6 shadow-xl relative overflow-hidden">
+<div class="absolute -right-4 -top-4 size-24 bg-primary/20 rounded-full blur-3xl"></div>
+<h3 class="text-lg font-bold text-white relative z-10">Smart AI Insights</h3>
+<div class="mt-4 space-y-4 relative z-10">
+<div class="flex gap-3">
+<span class="material-symbols-outlined text-primary">analytics</span>
+<div>
+<p class="text-sm font-bold text-white">Efficiency Peak</p>
+<p class="text-xs text-slate-400">You perform 30% better on logic tasks between 8 AM - 10 AM.</p>
+</div>
+</div>
+<div class="flex gap-3">
+<span class="material-symbols-outlined text-orange-400">warning</span>
+<div>
+<p class="text-sm font-bold text-white">Critical Weakness</p>
+<p class="text-xs text-slate-400">Probability questions are your lowest scoring area. Roadmap adjusted to include 2 extra drills.</p>
+</div>
+</div>
+<div class="flex gap-3">
+<span class="material-symbols-outlined text-green-400">emoji_events</span>
+<div>
+<p class="text-sm font-bold text-white">Pace Progress</p>
+<p class="text-xs text-slate-400">You're 2 days ahead of schedule. We've added a light review day on Friday.</p>
+</div>
+</div>
+</div>
+<button class="w-full mt-6 py-2 bg-primary/20 hover:bg-primary/30 text-primary text-xs font-bold rounded-lg transition-colors">
+                            Detailed Analytics
+                        </button>
+</div>
+<div class="bg-slate-100 dark:bg-primary/5 p-6 rounded-xl border border-slate-200 dark:border-primary/10">
+<h3 class="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4">Topic Weightage (Exam Pattern)</h3>
+<div class="space-y-4">
+<div class="space-y-1">
+<div class="flex justify-between text-xs">
+<span class="text-slate-600 dark:text-slate-400">Org Chemistry</span>
+<span class="text-slate-900 dark:text-slate-100 font-bold">40%</span>
+</div>
+<div class="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full">
+<div class="h-full bg-primary rounded-full" style="width: 40%"></div>
+</div>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-xs">
+<span class="text-slate-600 dark:text-slate-400">Bio-Chem</span>
+<span class="text-slate-900 dark:text-slate-100 font-bold">35%</span>
+</div>
+<div class="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full">
+<div class="h-full bg-orange-400 rounded-full" style="width: 35%"></div>
+</div>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-xs">
+<span class="text-slate-600 dark:text-slate-400">Physics</span>
+<span class="text-slate-900 dark:text-slate-100 font-bold">15%</span>
+</div>
+<div class="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full">
+<div class="h-full bg-slate-400 rounded-full" style="width: 15%"></div>
+</div>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-xs">
+<span class="text-slate-600 dark:text-slate-400">Psych/Soc</span>
+<span class="text-slate-900 dark:text-slate-100 font-bold">10%</span>
+</div>
+<div class="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full">
+<div class="h-full bg-slate-400 rounded-full" style="width: 10%"></div>
+</div>
+</div>
+</div>
+</div>
+</aside>
+</main>
+</div>
+</div>
+</body></html>

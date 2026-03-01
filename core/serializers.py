@@ -7,8 +7,8 @@ from .models import TopicMastery, UserStreak, UserProfile, Notification
 class LectureNoteSerializer(serializers.ModelSerializer):
     class Meta:
         model = LectureNote
-        fields = ['id', 'title', 'file', 'content', 'created_at']
-        read_only_fields = ['content', 'created_at']
+        fields = ['id', 'title', 'file', 'content', 'created_at', 'study_notes', 'formulas', 'key_points']
+        read_only_fields = ['content', 'created_at', 'study_notes', 'formulas', 'key_points']
 
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:

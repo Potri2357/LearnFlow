@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lecture Notes Management - StudyAI</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                        "surface-dark": "#1c2b36",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "Noto Sans", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#111a22] dark:text-white antialiased overflow-x-hidden min-h-screen flex flex-col">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e5e7eb] dark:border-b-[#233648] px-4 sm:px-10 py-3 bg-white dark:bg-[#111a22] sticky top-0 z-50">
+<div class="flex items-center gap-4 sm:gap-8">
+<div class="flex items-center gap-4 text-[#111a22] dark:text-white">
+<div class="size-8 text-primary">
+<svg class="w-full h-full" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_6_543)">
+<path d="M42.1739 20.1739L27.8261 5.82609C29.1366 7.13663 28.3989 10.1876 26.2002 13.7654C24.8538 15.9564 22.9595 18.3449 20.6522 20.6522C18.3449 22.9595 15.9564 24.8538 13.7654 26.2002C10.1876 28.3989 7.13663 29.1366 5.82609 27.8261L20.1739 42.1739C21.4845 43.4845 24.5355 42.7467 28.1133 40.548C30.3042 39.2016 32.6927 37.3073 35 35C37.3073 32.6927 39.2016 30.3042 40.548 28.1133C42.7467 24.5355 43.4845 21.4845 42.1739 20.1739Z" fill="currentColor"></path>
+<path clip-rule="evenodd" d="M7.24189 26.4066C7.31369 26.4411 7.64204 26.5637 8.52504 26.3738C9.59462 26.1438 11.0343 25.5311 12.7183 24.4963C14.7583 23.2426 17.0256 21.4503 19.238 19.238C21.4503 17.0256 23.2426 14.7583 24.4963 12.7183C25.5311 11.0343 26.1438 9.59463 26.3738 8.52504C26.5637 7.64204 26.4411 7.31369 26.4066 7.24189C26.345 7.21246 26.143 7.14535 25.6664 7.1918C24.9745 7.25925 23.9954 7.5498 22.7699 8.14278C20.3369 9.32007 17.3369 11.4915 14.4142 14.4142C11.4915 17.3369 9.32007 20.3369 8.14278 22.7699C7.5498 23.9954 7.25925 24.9745 7.1918 25.6664C7.14534 26.143 7.21246 26.345 7.24189 26.4066ZM29.9001 10.7285C29.4519 12.0322 28.7617 13.4172 27.9042 14.8126C26.465 17.1544 24.4686 19.6641 22.0664 22.0664C19.6641 24.4686 17.1544 26.465 14.8126 27.9042C13.4172 28.7617 12.0322 29.4519 10.7285 29.9001L21.5754 40.747C21.6001 40.7606 21.8995 40.931 22.8729 40.7217C23.9424 40.4916 25.3821 39.879 27.0661 38.8441C29.1062 37.5904 31.3734 35.7982 33.5858 33.5858C35.7982 31.3734 37.5904 29.1062 38.8441 27.0661C39.879 25.3821 40.4916 23.9425 40.7216 22.8729C40.931 21.8995 40.7606 21.6001 40.747 21.5754L29.9001 10.7285ZM29.2403 4.41187L43.5881 18.7597C44.9757 20.1473 44.9743 22.1235 44.6322 23.7139C44.2714 25.3919 43.4158 27.2666 42.252 29.1604C40.8128 31.5022 38.8165 34.012 36.4142 36.4142C34.012 38.8165 31.5022 40.8128 29.1604 42.252C27.2666 43.4158 25.3919 44.2714 23.7139 44.6322C22.1235 44.9743 20.1473 44.9757 18.7597 43.5881L4.41187 29.2403C3.29027 28.1187 3.08209 26.5973 3.21067 25.2783C3.34099 23.9415 3.8369 22.4852 4.54214 21.0277C5.96129 18.0948 8.43335 14.7382 11.5858 11.5858C14.7382 8.43335 18.0948 5.9613 21.0277 4.54214C22.4852 3.8369 23.9415 3.34099 25.2783 3.21067C26.5973 3.08209 28.1187 3.29028 29.2403 4.41187Z" fill="currentColor" fill-rule="evenodd"></path>
+</g>
+<defs>
+<clipPath id="clip0_6_543"><rect fill="white" height="48" width="48"></rect></clipPath>
+</defs>
+</svg>
+</div>
+<h2 class="text-[#111a22] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">StudyAI</h2>
+</div>
+<label class="hidden md:flex flex-col min-w-40 !h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full border border-[#e5e7eb] dark:border-[#233648] bg-[#f9fafb] dark:bg-[#233648]">
+<div class="text-[#6b7280] dark:text-[#92adc9] flex items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined" style="font-size: 20px;">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111a22] dark:text-white focus:outline-0 focus:ring-0 border-none bg-transparent focus:border-none h-full placeholder:text-[#6b7280] dark:placeholder:text-[#92adc9] px-4 rounded-l-none border-l-0 pl-2 text-sm font-normal leading-normal" placeholder="Search notes..." value=""/>
+</div>
+</label>
+</div>
+<div class="flex flex-1 justify-end gap-4 sm:gap-8">
+<div class="hidden md:flex items-center gap-6 lg:gap-9">
+<a class="text-[#6b7280] dark:text-[#92adc9] hover:text-primary dark:hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Dashboard</a>
+<a class="text-[#6b7280] dark:text-[#92adc9] hover:text-primary dark:hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Courses</a>
+<a class="text-[#111a22] dark:text-white text-sm font-medium leading-normal transition-colors" href="#">Practice</a>
+<a class="text-[#6b7280] dark:text-[#92adc9] hover:text-primary dark:hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Profile</a>
+</div>
+<button class="flex items-center justify-center overflow-hidden rounded-lg h-10 w-10 text-[#111a22] dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined" style="font-size: 24px;">notifications</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border border-[#e5e7eb] dark:border-[#324d67]" data-alt="User profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCSXqkrXhRQlG6mspAJQv9aGQwNwN8K2sEJFT9R1gyKrCvn_TgP6QLt4CUViPfjjPtcOVz81rjZfolhryaE451mx7JZC4Ausw4OGyIN4JYKW9A2N0Jps7oVL7TLEwXABzRDahiJejg41o4919ou3XqdcB8EpzS4B_7r23q7fLn5wmmv5_EOz4wy_qcCEbMy4KFlj7tygptUOU6DzPVi-BdTDYSzAmy0InFbaCfEEIGa439hTRpm_RJlUGKYVNq4huqyIy7WmVZhq-g");'></div>
+</div>
+</header>
+<main class="flex-grow flex flex-col items-center py-6 sm:py-10 px-4 sm:px-10 lg:px-40 w-full max-w-[1440px] mx-auto">
+<div class="w-full max-w-full mb-8">
+<div class="flex flex-col gap-4">
+<div class="flex flex-wrap gap-2 text-sm">
+<a class="text-[#6b7280] dark:text-[#92adc9] font-medium leading-normal hover:underline" href="#">Home</a>
+<span class="text-[#6b7280] dark:text-[#92adc9] font-medium leading-normal">/</span>
+<a class="text-[#6b7280] dark:text-[#92adc9] font-medium leading-normal hover:underline" href="#">Dashboard</a>
+<span class="text-[#6b7280] dark:text-[#92adc9] font-medium leading-normal">/</span>
+<span class="text-[#111a22] dark:text-white font-medium leading-normal">Lecture Notes</span>
+</div>
+<div>
+<h1 class="text-[#111a22] dark:text-white text-3xl sm:text-4xl font-black leading-tight tracking-[-0.033em] mb-2">Lecture Notes Management</h1>
+<p class="text-[#6b7280] dark:text-[#92adc9] text-base font-normal leading-normal max-w-2xl">Upload your lecture materials and let our AI generate personalized study plans, quizzes, and summaries for you.</p>
+</div>
+</div>
+</div>
+<div class="w-full max-w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
+<div class="lg:col-span-4 flex flex-col gap-6">
+<div class="flex flex-col rounded-xl bg-white dark:bg-surface-dark border border-[#e5e7eb] dark:border-[#324d67] shadow-sm overflow-hidden">
+<div class="flex border-b border-[#e5e7eb] dark:border-[#324d67]">
+<button class="flex-1 flex flex-col items-center justify-center border-b-[3px] border-b-primary text-primary dark:text-white py-4 px-2 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+<span class="text-sm font-bold leading-normal tracking-[0.015em] flex items-center gap-2">
+<span class="material-symbols-outlined text-xl">upload_file</span>
+                                Upload File
+                            </span>
+</button>
+<button class="flex-1 flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-[#6b7280] dark:text-[#92adc9] py-4 px-2 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+<span class="text-sm font-bold leading-normal tracking-[0.015em] flex items-center gap-2 group-hover:text-primary dark:group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-xl">content_paste</span>
+                                Paste Text
+                            </span>
+</button>
+</div>
+<div class="p-6 flex flex-col gap-6">
+<div class="flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-[#d1d5db] dark:border-[#324d67] hover:border-primary dark:hover:border-primary bg-[#f9fafb] dark:bg-[#101922] p-8 transition-colors cursor-pointer group">
+<div class="p-3 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-3xl">cloud_upload</span>
+</div>
+<div class="text-center">
+<p class="text-[#111a22] dark:text-white text-base font-bold mb-1">Click or drag file to upload</p>
+<p class="text-[#6b7280] dark:text-[#92adc9] text-xs">PDF, DOCX, TXT (Max 25MB)</p>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<h3 class="text-xs font-bold uppercase tracking-wider text-[#6b7280] dark:text-[#92adc9]">AI Processing Options</h3>
+<label class="flex items-center justify-between p-3 rounded-lg border border-[#e5e7eb] dark:border-[#324d67] cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#6b7280] dark:text-[#92adc9]">document_scanner</span>
+<div class="flex flex-col">
+<span class="text-sm font-bold text-[#111a22] dark:text-white">Smart OCR</span>
+<span class="text-xs text-[#6b7280] dark:text-[#92adc9]">Extract text from images/scans</span>
+</div>
+</div>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer checked:right-0 right-5 checked:border-primary" id="toggle-ocr" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 dark:bg-gray-600 cursor-pointer" for="toggle-ocr"></label>
+</div>
+</label>
+<label class="flex items-center justify-between p-3 rounded-lg border border-[#e5e7eb] dark:border-[#324d67] cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#6b7280] dark:text-[#92adc9]">graphic_eq</span>
+<div class="flex flex-col">
+<span class="text-sm font-bold text-[#111a22] dark:text-white">Noise Reduction</span>
+<span class="text-xs text-[#6b7280] dark:text-[#92adc9]">Clean up audio transcripts</span>
+</div>
+</div>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer right-5" id="toggle-noise" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 dark:bg-gray-600 cursor-pointer" for="toggle-noise"></label>
+</div>
+</label>
+</div>
+<button class="w-full flex items-center justify-center gap-2 rounded-lg h-12 bg-primary hover:bg-primary/90 text-white font-bold text-sm tracking-[0.015em] transition-all shadow-lg shadow-primary/25">
+<span class="material-symbols-outlined">auto_awesome</span>
+                            Upload &amp; Analyze
+                        </button>
+</div>
+</div>
+<div class="rounded-xl bg-gradient-to-br from-[#1c2b36] to-[#111a22] p-5 border border-[#324d67] relative overflow-hidden hidden lg:block">
+<div class="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-primary/20 rounded-full blur-xl"></div>
+<div class="flex gap-3 items-start relative z-10">
+<span class="material-symbols-outlined text-primary mt-1">lightbulb</span>
+<div>
+<h4 class="text-white font-bold text-sm mb-1">Pro Tip</h4>
+<p class="text-[#92adc9] text-sm leading-relaxed">Better quality uploads lead to better questions. Try to upload clear scans or original PDFs for the most accurate quiz generation.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="lg:col-span-8 flex flex-col gap-6">
+<div class="flex flex-wrap items-center justify-between gap-4">
+<h2 class="text-xl font-bold text-[#111a22] dark:text-white">Your Notes Library</h2>
+<div class="flex items-center gap-2">
+<div class="relative">
+<select class="appearance-none bg-white dark:bg-surface-dark border border-[#e5e7eb] dark:border-[#324d67] text-[#111a22] dark:text-white text-sm rounded-lg px-3 py-2 pr-8 focus:outline-none focus:border-primary">
+<option>Recent First</option>
+<option>Oldest First</option>
+<option>Name A-Z</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[#6b7280] pointer-events-none text-sm">expand_more</span>
+</div>
+<button class="p-2 bg-white dark:bg-surface-dark border border-[#e5e7eb] dark:border-[#324d67] rounded-lg text-[#6b7280] dark:text-[#92adc9] hover:text-primary dark:hover:text-white transition-colors">
+<span class="material-symbols-outlined text-xl">filter_list</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col gap-4">
+<div class="group relative flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl bg-white dark:bg-surface-dark border border-[#e5e7eb] dark:border-[#324d67] hover:border-primary/50 dark:hover:border-primary/50 transition-all shadow-sm">
+<div class="flex items-center justify-center w-12 h-12 rounded-lg bg-yellow-500/10 text-yellow-500 shrink-0">
+<span class="material-symbols-outlined">hourglass_top</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<h3 class="text-[#111a22] dark:text-white font-bold text-base truncate">Advanced Molecular Biology - Week 4</h3>
+</div>
+<div class="flex items-center gap-3 text-xs text-[#6b7280] dark:text-[#92adc9]">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_today</span> Oct 24, 2023</span>
+<span class="w-1 h-1 rounded-full bg-[#6b7280] dark:bg-[#92adc9]"></span>
+<span class="text-yellow-600 dark:text-yellow-400 font-medium">Processing...</span>
+</div>
+<div class="w-full max-w-[200px] h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mt-2 overflow-hidden">
+<div class="h-full bg-yellow-500 rounded-full w-2/3 animate-pulse"></div>
+</div>
+</div>
+<div class="flex items-center gap-2 mt-2 sm:mt-0 opacity-50 pointer-events-none">
+<button class="p-2 text-[#6b7280] dark:text-[#92adc9] hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<div class="group relative flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl bg-white dark:bg-surface-dark border border-[#e5e7eb] dark:border-[#324d67] hover:border-primary/50 dark:hover:border-primary/50 transition-all shadow-sm">
+<div class="flex items-center justify-center w-12 h-12 rounded-lg bg-red-500/10 text-red-500 shrink-0">
+<span class="material-symbols-outlined">picture_as_pdf</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<h3 class="text-[#111a22] dark:text-white font-bold text-base truncate">Introduction to Philosophy: Ethics</h3>
+</div>
+<div class="flex items-center gap-3 text-xs text-[#6b7280] dark:text-[#92adc9]">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_today</span> Oct 22, 2023</span>
+<span class="w-1 h-1 rounded-full bg-[#6b7280] dark:bg-[#92adc9]"></span>
+<span class="text-green-600 dark:text-green-400 font-medium flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">check_circle</span> Ready</span>
+<span class="w-1 h-1 rounded-full bg-[#6b7280] dark:bg-[#92adc9]"></span>
+<span>2.4 MB</span>
+</div>
+</div>
+<div class="flex items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto justify-end">
+<button class="px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition-colors whitespace-nowrap">
+                                Generate Quiz
+                            </button>
+<button class="px-3 py-1.5 rounded-md border border-[#e5e7eb] dark:border-[#324d67] hover:border-primary/50 text-[#111a22] dark:text-white text-xs font-bold transition-colors whitespace-nowrap">
+                                Summarize
+                            </button>
+<div class="relative ml-1">
+<button class="p-2 text-[#6b7280] dark:text-[#92adc9] hover:text-primary dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group relative flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl bg-white dark:bg-surface-dark border border-[#e5e7eb] dark:border-[#324d67] hover:border-primary/50 dark:hover:border-primary/50 transition-all shadow-sm">
+<div class="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-500/10 text-blue-500 shrink-0">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<h3 class="text-[#111a22] dark:text-white font-bold text-base truncate">Calculus II - Integration Techniques</h3>
+</div>
+<div class="flex items-center gap-3 text-xs text-[#6b7280] dark:text-[#92adc9]">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_today</span> Oct 20, 2023</span>
+<span class="w-1 h-1 rounded-full bg-[#6b7280] dark:bg-[#92adc9]"></span>
+<span class="text-green-600 dark:text-green-400 font-medium flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">check_circle</span> Ready</span>
+<span class="w-1 h-1 rounded-full bg-[#6b7280] dark:bg-[#92adc9]"></span>
+<span>Pasted Text</span>
+</div>
+</div>
+<div class="flex items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto justify-end">
+<button class="px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition-colors whitespace-nowrap">
+                                Generate Quiz
+                            </button>
+<button class="px-3 py-1.5 rounded-md border border-[#e5e7eb] dark:border-[#324d67] hover:border-primary/50 text-[#111a22] dark:text-white text-xs font-bold transition-colors whitespace-nowrap">
+                                Summarize
+                            </button>
+<div class="relative ml-1">
+<button class="p-2 text-[#6b7280] dark:text-[#92adc9] hover:text-primary dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group relative flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl bg-white dark:bg-surface-dark border border-[#e5e7eb] dark:border-[#324d67] hover:border-primary/50 dark:hover:border-primary/50 transition-all shadow-sm">
+<div class="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-700/10 text-blue-700 shrink-0">
+<span class="material-symbols-outlined">article</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<h3 class="text-[#111a22] dark:text-white font-bold text-base truncate">History of Modern Art - Lecture 5</h3>
+</div>
+<div class="flex items-center gap-3 text-xs text-[#6b7280] dark:text-[#92adc9]">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_today</span> Oct 18, 2023</span>
+<span class="w-1 h-1 rounded-full bg-[#6b7280] dark:bg-[#92adc9]"></span>
+<span class="text-green-600 dark:text-green-400 font-medium flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">check_circle</span> Ready</span>
+<span class="w-1 h-1 rounded-full bg-[#6b7280] dark:bg-[#92adc9]"></span>
+<span>15 MB</span>
+</div>
+</div>
+<div class="flex items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto justify-end">
+<button class="px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition-colors whitespace-nowrap">
+                                Generate Quiz
+                            </button>
+<button class="px-3 py-1.5 rounded-md border border-[#e5e7eb] dark:border-[#324d67] hover:border-primary/50 text-[#111a22] dark:text-white text-xs font-bold transition-colors whitespace-nowrap">
+                                Summarize
+                            </button>
+<div class="relative ml-1">
+<button class="p-2 text-[#6b7280] dark:text-[#92adc9] hover:text-primary dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="flex justify-center mt-4">
+<button class="text-sm font-bold text-[#6b7280] dark:text-[#92adc9] hover:text-primary dark:hover:text-white flex items-center gap-2 transition-colors">
+                        View All Notes
+                        <span class="material-symbols-outlined text-lg">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<style>
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #137fec;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #137fec;
+        }
+    </style>
+</body></html>

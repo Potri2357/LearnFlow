@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Detailed Topic Analysis - AdaptiveLearn</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                        "surface-dark": "#16212b", // Slightly lighter than background-dark for cards
+                        "border-dark": "#233648",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #101922; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #324d67; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-x-hidden">
+<div class="relative flex min-h-screen w-full flex-col">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-solid border-border-dark bg-[#111a22]/95 backdrop-blur-md px-4 py-3 md:px-10">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4 text-white">
+<div class="size-8 text-primary">
+<svg class="h-8 w-8 text-primary" fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M39.475 21.6262C40.358 21.4363 40.6863 21.5589 40.7581 21.5934C40.7876 21.655 40.8547 21.857 40.8082 22.3336C40.7408 23.0255 40.4502 24.0046 39.8572 25.2301C38.6799 27.6631 36.5085 30.6631 33.5858 33.5858C30.6631 36.5085 27.6632 38.6799 25.2301 39.8572C24.0046 40.4502 23.0255 40.7407 22.3336 40.8082C21.8571 40.8547 21.6551 40.7875 21.5934 40.7581C21.5589 40.6863 21.4363 40.358 21.6262 39.475C21.8562 38.4054 22.4689 36.9657 23.5038 35.2817C24.7575 33.2417 26.5497 30.9744 28.7621 28.762C30.9744 26.5497 33.2417 24.7574 35.2817 23.5037C36.9657 22.4689 38.4054 21.8562 39.475 21.6262ZM4.41189 29.2403L18.7597 43.5881C19.8813 44.7097 21.4027 44.9179 22.7217 44.7893C24.0585 44.659 25.5148 44.1631 26.9723 43.4579C29.9052 42.0387 33.2618 39.5667 36.4142 36.4142C39.5667 33.2618 42.0387 29.9052 43.4579 26.9723C44.1631 25.5148 44.659 24.0585 44.7893 22.7217C44.9179 21.4027 44.7097 19.8813 43.5881 18.7597L29.2403 4.41187C27.8527 3.02428 25.8765 3.02573 24.2861 3.36776C22.6081 3.72863 20.7334 4.58419 18.8396 5.74801C16.4978 7.18716 13.9881 9.18353 11.5858 11.5858C9.18354 13.988 7.18717 16.4978 5.74802 18.8396C4.58421 20.7334 3.72865 22.6081 3.36778 24.2861C3.02574 25.8765 3.02429 27.8527 4.41189 29.2403Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] hidden sm:block">AdaptiveLearn</h2>
+</div>
+<nav class="hidden md:flex items-center gap-9">
+<a class="text-slate-400 hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Dashboard</a>
+<a class="text-slate-400 hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Study Plans</a>
+<a class="text-slate-400 hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Exams</a>
+<a class="text-white text-sm font-medium leading-normal" href="#">Analysis</a>
+<a class="text-slate-400 hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Profile</a>
+</nav>
+</div>
+<div class="flex flex-1 justify-end gap-8 items-center">
+<label class="hidden md:flex flex-col min-w-40 !h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full group bg-[#233648] focus-within:ring-2 ring-primary/50 transition-all">
+<div class="text-[#92adc9] flex border-none bg-transparent items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-white focus:outline-0 focus:ring-0 border-none bg-transparent focus:border-none h-full placeholder:text-[#92adc9] px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal" placeholder="Search topics..." value=""/>
+</div>
+</label>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 ring-2 ring-border-dark cursor-pointer" data-alt="User profile picture showing a smiling student" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCSMVB5ovl2SmTd1LXm4e8xzhoJG6bFVhQU9Td-WRJcB2TLs6l3q2d0HrfsggytX0koyWJ6JfQuV3_lnCI-Uh4g6Ngq2v3hoHfn9XIppVzNoNGzBI3WCX3xoTZbPaegcFRNXDWswC6tRv1RMI-Pq6Zz9tjG13Y2sGts28_PTUvrc4No4yYyUnr2yCkGPwIUrbP-vZwGo2b8SwhSg2C1Ax2_BdBExLSz-V995qG1mgk_WUbSm_SJDyYuBqxpuu0bAy8u5tcUlSyfhVw");'></div>
+</div>
+</header>
+<div class="flex-1 flex justify-center py-8 px-4 md:px-10 lg:px-40">
+<div class="flex flex-col max-w-[1200px] flex-1 gap-6">
+<!-- Page Heading & Actions -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+<div class="flex flex-col gap-3">
+<h1 class="text-white text-4xl font-black leading-tight tracking-[-0.033em]">Detailed Topic Analysis</h1>
+<p class="text-[#92adc9] text-base font-normal leading-normal max-w-2xl">Deep dive into your mastery levels, speed, and accuracy across all subjects to optimize your study plan.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-[#233648] hover:bg-[#2c4257] transition-colors text-white text-sm font-bold leading-normal">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span class="truncate">Export Report</span>
+</button>
+</div>
+</div>
+<!-- Filters -->
+<div class="flex gap-3 flex-wrap border-b border-border-dark pb-6">
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-primary text-white pl-4 pr-4 transition-all hover:opacity-90">
+<p class="text-sm font-medium leading-normal">Last 7 Days</p>
+</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#233648] hover:bg-[#2c4257] text-[#92adc9] hover:text-white pl-4 pr-4 transition-all">
+<p class="text-sm font-medium leading-normal">Last 30 Days</p>
+</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#233648] hover:bg-[#2c4257] text-[#92adc9] hover:text-white pl-4 pr-4 transition-all">
+<p class="text-sm font-medium leading-normal">All Time</p>
+</button>
+</div>
+<!-- Summary Stats -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="flex flex-col gap-2 rounded-xl p-6 border border-border-dark bg-surface-dark relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl text-primary">pie_chart</span>
+</div>
+<p class="text-[#92adc9] text-sm font-medium uppercase tracking-wider">Overall Mastery</p>
+<div class="flex items-end gap-3">
+<p class="text-white tracking-tight text-4xl font-bold leading-none">78%</p>
+<span class="flex items-center text-[#0bda5b] text-sm font-medium bg-[#0bda5b]/10 px-2 py-0.5 rounded mb-1">
+<span class="material-symbols-outlined text-[14px] mr-1">trending_up</span>+2.4%
+                            </span>
+</div>
+<p class="text-slate-400 text-sm mt-1">Top 15% of your class</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 border border-border-dark bg-surface-dark relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl text-[#0bda5b]">check_circle</span>
+</div>
+<p class="text-[#92adc9] text-sm font-medium uppercase tracking-wider">Strongest Topic</p>
+<div class="flex items-end gap-3">
+<p class="text-white tracking-tight text-3xl font-bold leading-none truncate">Calculus</p>
+</div>
+<div class="w-full bg-[#233648] rounded-full h-1.5 mt-3">
+<div class="bg-[#0bda5b] h-1.5 rounded-full" style="width: 92%"></div>
+</div>
+<p class="text-slate-400 text-sm mt-1">92% Accuracy • 45s Avg Time</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 border border-border-dark bg-surface-dark relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl text-[#fa6238]">warning</span>
+</div>
+<p class="text-[#92adc9] text-sm font-medium uppercase tracking-wider">Weakest Topic</p>
+<div class="flex items-end gap-3">
+<p class="text-white tracking-tight text-3xl font-bold leading-none truncate">Organic Chem</p>
+</div>
+<div class="w-full bg-[#233648] rounded-full h-1.5 mt-3">
+<div class="bg-[#fa6238] h-1.5 rounded-full" style="width: 42%"></div>
+</div>
+<p class="text-slate-400 text-sm mt-1">42% Accuracy • 1m 20s Avg Time</p>
+</div>
+</div>
+<!-- AI Insight Banner -->
+<div class="w-full rounded-xl bg-gradient-to-r from-primary/20 via-primary/10 to-transparent border border-primary/30 p-5 flex items-start gap-4">
+<div class="rounded-full bg-primary/20 p-2 text-primary shrink-0">
+<span class="material-symbols-outlined">auto_awesome</span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="text-white font-bold text-lg">AI Performance Insight</h3>
+<p class="text-[#92adc9] text-sm md:text-base leading-relaxed">
+                            You're spending <span class="text-white font-medium">20% more time</span> on Algebra than Geometry, but your accuracy is significantly lower. This suggests a concept gap rather than a speed issue. We recommend reviewing <a class="text-primary hover:underline font-medium" href="#">Quadratic Equations</a> before taking the next quiz.
+                        </p>
+</div>
+</div>
+<!-- Main Content Grid: Scatter Plot + Focus Areas -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Left: Scatter Plot (Simulated) -->
+<div class="lg:col-span-2 flex flex-col rounded-xl border border-border-dark bg-surface-dark p-6 h-[500px]">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-white text-xl font-bold">Speed vs. Accuracy Analysis</h3>
+<button class="text-[#92adc9] hover:text-white transition-colors">
+<span class="material-symbols-outlined">info</span>
+</button>
+</div>
+<!-- Chart Area -->
+<div class="relative flex-1 w-full border-l border-b border-[#324d67] ml-4 mb-8">
+<!-- Y Axis Label -->
+<div class="absolute -left-10 top-1/2 -rotate-90 text-xs text-[#92adc9] font-medium tracking-widest uppercase">Accuracy</div>
+<!-- X Axis Label -->
+<div class="absolute left-1/2 -bottom-10 text-xs text-[#92adc9] font-medium tracking-widest uppercase">Time per Question</div>
+<!-- Grid Lines -->
+<div class="absolute inset-0 grid grid-cols-4 grid-rows-4">
+<div class="border-r border-t border-[#324d67]/20 border-dashed"></div>
+<div class="border-r border-t border-[#324d67]/20 border-dashed"></div>
+<div class="border-r border-t border-[#324d67]/20 border-dashed"></div>
+<div class="border-t border-[#324d67]/20 border-dashed"></div>
+<div class="border-r border-t border-[#324d67]/20 border-dashed"></div>
+<div class="border-r border-t border-[#324d67]/20 border-dashed bg-green-500/5"></div> <!-- High Acc / High Speed zone -->
+<div class="border-r border-t border-[#324d67]/20 border-dashed"></div>
+<div class="border-t border-[#324d67]/20 border-dashed"></div>
+<div class="border-r border-t border-[#324d67]/20 border-dashed"></div>
+<div class="border-r border-t border-[#324d67]/20 border-dashed"></div>
+<div class="border-r border-t border-[#324d67]/20 border-dashed"></div>
+<div class="border-t border-[#324d67]/20 border-dashed"></div>
+<div class="border-r border-[#324d67]/20 border-dashed bg-red-500/5"></div> <!-- Low Acc / Low Speed zone -->
+<div class="border-r border-[#324d67]/20 border-dashed"></div>
+<div class="border-r border-[#324d67]/20 border-dashed"></div>
+<div class=""></div>
+</div>
+<!-- Data Points (Simulated) -->
+<!-- Top Right: Fast & Accurate -->
+<div class="absolute bottom-[80%] left-[20%] group cursor-pointer">
+<div class="size-4 bg-[#0bda5b] rounded-full shadow-[0_0_10px_rgba(11,218,91,0.5)] border-2 border-[#101922] transition-transform group-hover:scale-150"></div>
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#233648] text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-10 pointer-events-none transition-opacity">Calculus (92%)</div>
+</div>
+<!-- Bottom Left: Slow & Inaccurate (Problem Area) -->
+<div class="absolute bottom-[20%] left-[80%] group cursor-pointer">
+<div class="size-6 bg-[#fa6238] rounded-full shadow-[0_0_15px_rgba(250,98,56,0.5)] border-2 border-[#101922] transition-transform group-hover:scale-125"></div>
+<div class="absolute bottom-8 left-1/2 -translate-x-1/2 bg-[#233648] text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-10 pointer-events-none transition-opacity">Organic Chem (42%)</div>
+</div>
+<!-- Middle: Average -->
+<div class="absolute bottom-[60%] left-[45%] group cursor-pointer">
+<div class="size-3 bg-primary rounded-full shadow-[0_0_10px_rgba(19,127,236,0.5)] border-2 border-[#101922] transition-transform group-hover:scale-150"></div>
+<div class="absolute bottom-5 left-1/2 -translate-x-1/2 bg-[#233648] text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-10 pointer-events-none transition-opacity">Physics (65%)</div>
+</div>
+<!-- More points -->
+<div class="absolute bottom-[75%] left-[30%] group cursor-pointer">
+<div class="size-3 bg-[#0bda5b]/80 rounded-full border border-[#101922]"></div>
+</div>
+<div class="absolute bottom-[35%] left-[65%] group cursor-pointer">
+<div class="size-4 bg-[#fa6238]/80 rounded-full border border-[#101922]"></div>
+</div>
+</div>
+<!-- Legend -->
+<div class="flex justify-center gap-6 mt-2">
+<div class="flex items-center gap-2">
+<div class="size-3 rounded-full bg-[#0bda5b]"></div>
+<span class="text-xs text-[#92adc9]">Strong</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="size-3 rounded-full bg-primary"></div>
+<span class="text-xs text-[#92adc9]">Average</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="size-3 rounded-full bg-[#fa6238]"></div>
+<span class="text-xs text-[#92adc9]">Weak</span>
+</div>
+</div>
+</div>
+<!-- Right: Focus Areas -->
+<div class="flex flex-col gap-4">
+<h3 class="text-white text-xl font-bold px-1">Recommended Focus</h3>
+<!-- Card 1 -->
+<div class="flex flex-col gap-3 rounded-xl border border-border-dark bg-surface-dark p-5 shadow-lg hover:border-primary/50 transition-colors">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2 text-[#fa6238] font-medium text-sm">
+<span class="material-symbols-outlined text-[18px]">trending_down</span>
+                                    High Priority
+                                </div>
+<span class="text-xs text-[#92adc9] bg-[#233648] px-2 py-1 rounded">Chem</span>
+</div>
+<div>
+<h4 class="text-white font-bold text-lg">Organic Chemistry</h4>
+<p class="text-[#92adc9] text-sm mt-1 line-clamp-2">Your accuracy dropped by 15% in the last module. Focus on reaction mechanisms.</p>
+</div>
+<button class="mt-2 w-full flex items-center justify-center gap-2 rounded-lg bg-primary hover:bg-blue-600 text-white font-bold py-2.5 text-sm transition-colors">
+                                Start Practice
+                                <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+<!-- Card 2 -->
+<div class="flex flex-col gap-3 rounded-xl border border-border-dark bg-surface-dark p-5 shadow-lg hover:border-primary/50 transition-colors">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2 text-amber-400 font-medium text-sm">
+<span class="material-symbols-outlined text-[18px]">speed</span>
+                                    Speed Improvement
+                                </div>
+<span class="text-xs text-[#92adc9] bg-[#233648] px-2 py-1 rounded">Math</span>
+</div>
+<div>
+<h4 class="text-white font-bold text-lg">Linear Algebra</h4>
+<p class="text-[#92adc9] text-sm mt-1 line-clamp-2">Accuracy is good (85%), but you're taking 2x longer than average per question.</p>
+</div>
+<button class="mt-2 w-full flex items-center justify-center gap-2 rounded-lg bg-[#233648] hover:bg-[#2c4257] text-white font-bold py-2.5 text-sm transition-colors">
+                                Try Timed Quiz
+                            </button>
+</div>
+<!-- Card 3 -->
+<div class="flex flex-col gap-3 rounded-xl border border-border-dark bg-surface-dark p-5 shadow-lg hover:border-primary/50 transition-colors">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2 text-purple-400 font-medium text-sm">
+<span class="material-symbols-outlined text-[18px]">refresh</span>
+                                    Review Needed
+                                </div>
+<span class="text-xs text-[#92adc9] bg-[#233648] px-2 py-1 rounded">History</span>
+</div>
+<div>
+<h4 class="text-white font-bold text-lg">World War II</h4>
+<p class="text-[#92adc9] text-sm mt-1 line-clamp-2">It's been 14 days since you last reviewed this topic.</p>
+</div>
+<button class="mt-2 w-full flex items-center justify-center gap-2 rounded-lg bg-[#233648] hover:bg-[#2c4257] text-white font-bold py-2.5 text-sm transition-colors">
+                                Quick Review
+                            </button>
+</div>
+</div>
+</div>
+<!-- Detailed Topic List Table -->
+<div class="flex flex-col gap-4 mt-4">
+<div class="flex items-center justify-between">
+<h3 class="text-white text-xl font-bold">Topic Breakdown</h3>
+<div class="flex gap-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2 top-1.5 text-[#92adc9] text-[18px]">search</span>
+<input class="bg-[#233648] border-none rounded-lg py-1 pl-8 pr-3 text-sm text-white focus:ring-1 focus:ring-primary w-48 placeholder:text-[#5a7690]" placeholder="Filter topics" type="text"/>
+</div>
+</div>
+</div>
+<div class="overflow-x-auto rounded-xl border border-border-dark bg-surface-dark">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-[#1c2a38] border-b border-border-dark">
+<th class="p-4 text-xs font-medium uppercase tracking-wider text-[#92adc9]">Topic Name</th>
+<th class="p-4 text-xs font-medium uppercase tracking-wider text-[#92adc9]">Mastery</th>
+<th class="p-4 text-xs font-medium uppercase tracking-wider text-[#92adc9]">Avg Time / Q</th>
+<th class="p-4 text-xs font-medium uppercase tracking-wider text-[#92adc9]">Last Quiz</th>
+<th class="p-4 text-xs font-medium uppercase tracking-wider text-[#92adc9] text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-dark">
+<tr class="group hover:bg-[#233648]/50 transition-colors">
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="bg-blue-500/10 p-2 rounded-lg text-blue-500">
+<span class="material-symbols-outlined text-[20px]">calculate</span>
+</div>
+<div>
+<p class="text-white font-medium text-sm">Calculus: Derivatives</p>
+<p class="text-[#92adc9] text-xs">Mathematics</p>
+</div>
+</div>
+</td>
+<td class="p-4">
+<div class="flex flex-col gap-1 w-24">
+<div class="flex justify-between text-xs">
+<span class="text-white font-bold">92%</span>
+<span class="text-[#0bda5b]">High</span>
+</div>
+<div class="w-full bg-[#111a22] rounded-full h-1.5">
+<div class="bg-[#0bda5b] h-1.5 rounded-full" style="width: 92%"></div>
+</div>
+</div>
+</td>
+<td class="p-4 text-sm text-white">45s <span class="text-[#0bda5b] text-xs ml-1">(-10%)</span></td>
+<td class="p-4 text-sm text-[#92adc9]">2 hours ago</td>
+<td class="p-4 text-right">
+<button class="text-[#92adc9] hover:text-white p-2 rounded hover:bg-[#324d67] transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="group hover:bg-[#233648]/50 transition-colors">
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="bg-orange-500/10 p-2 rounded-lg text-orange-500">
+<span class="material-symbols-outlined text-[20px]">science</span>
+</div>
+<div>
+<p class="text-white font-medium text-sm">Organic Chemistry: Alkenes</p>
+<p class="text-[#92adc9] text-xs">Chemistry</p>
+</div>
+</div>
+</td>
+<td class="p-4">
+<div class="flex flex-col gap-1 w-24">
+<div class="flex justify-between text-xs">
+<span class="text-white font-bold">42%</span>
+<span class="text-[#fa6238]">Low</span>
+</div>
+<div class="w-full bg-[#111a22] rounded-full h-1.5">
+<div class="bg-[#fa6238] h-1.5 rounded-full" style="width: 42%"></div>
+</div>
+</div>
+</td>
+<td class="p-4 text-sm text-white">1m 20s <span class="text-[#fa6238] text-xs ml-1">(+15%)</span></td>
+<td class="p-4 text-sm text-[#92adc9]">Yesterday</td>
+<td class="p-4 text-right">
+<button class="bg-primary/20 hover:bg-primary/30 text-primary text-xs font-bold px-3 py-1.5 rounded transition-colors">
+                                            Practice
+                                        </button>
+</td>
+</tr>
+<tr class="group hover:bg-[#233648]/50 transition-colors">
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="bg-purple-500/10 p-2 rounded-lg text-purple-500">
+<span class="material-symbols-outlined text-[20px]">menu_book</span>
+</div>
+<div>
+<p class="text-white font-medium text-sm">European History: WWII</p>
+<p class="text-[#92adc9] text-xs">History</p>
+</div>
+</div>
+</td>
+<td class="p-4">
+<div class="flex flex-col gap-1 w-24">
+<div class="flex justify-between text-xs">
+<span class="text-white font-bold">68%</span>
+<span class="text-yellow-500">Avg</span>
+</div>
+<div class="w-full bg-[#111a22] rounded-full h-1.5">
+<div class="bg-yellow-500 h-1.5 rounded-full" style="width: 68%"></div>
+</div>
+</div>
+</td>
+<td class="p-4 text-sm text-white">35s <span class="text-[#0bda5b] text-xs ml-1">(-5%)</span></td>
+<td class="p-4 text-sm text-[#92adc9]">3 days ago</td>
+<td class="p-4 text-right">
+<button class="text-[#92adc9] hover:text-white p-2 rounded hover:bg-[#324d67] transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="group hover:bg-[#233648]/50 transition-colors">
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="bg-blue-500/10 p-2 rounded-lg text-blue-500">
+<span class="material-symbols-outlined text-[20px]">functions</span>
+</div>
+<div>
+<p class="text-white font-medium text-sm">Physics: Kinematics</p>
+<p class="text-[#92adc9] text-xs">Physics</p>
+</div>
+</div>
+</td>
+<td class="p-4">
+<div class="flex flex-col gap-1 w-24">
+<div class="flex justify-between text-xs">
+<span class="text-white font-bold">75%</span>
+<span class="text-blue-400">Good</span>
+</div>
+<div class="w-full bg-[#111a22] rounded-full h-1.5">
+<div class="bg-blue-400 h-1.5 rounded-full" style="width: 75%"></div>
+</div>
+</div>
+</td>
+<td class="p-4 text-sm text-white">55s <span class="text-slate-500 text-xs ml-1">(0%)</span></td>
+<td class="p-4 text-sm text-[#92adc9]">5 days ago</td>
+<td class="p-4 text-right">
+<button class="text-[#92adc9] hover:text-white p-2 rounded hover:bg-[#324d67] transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>

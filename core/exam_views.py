@@ -538,9 +538,6 @@ OUTPUT FORMAT (JSON ONLY):
             raw_text = ""
             print(f"Strategy generation failed: {e}")
             raise e
-        except Exception as e:
-            print(f"Strategy generation failed: {e}")
-            return Response({"error": str(e)}, status=500)
         
         # Parse JSON
         # Parse JSON using robust helper
