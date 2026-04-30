@@ -4,7 +4,7 @@ import traceback
 import json
 import os
 import google.generativeai as genai
-from .ai_utils import generate_ai_content
+from .ai_utils import generate_ai_content, cached_generate_ai_content
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -214,7 +214,7 @@ Return a concise analysis (max 300 words).
             
             try:
                 try:
-                    pattern_analysis = generate_ai_content(pattern_prompt).strip()
+                    pattern_analysis = cached_generate_ai_content('exam_pattern_analysis', pattern_prompt, exam_syllabus=syllabus).strip()
                 except:
                     pattern_analysis = "Pattern analysis unavailable"
                 print(f"Pattern Analysis: {pattern_analysis}")
@@ -292,7 +292,7 @@ Return ONLY valid JSON array:
 """
         
         try:
-            raw_text = generate_ai_content(question_prompt).strip()
+            raw_text = cached_generate_ai_content('generate_exam_questions', question_prompt, exam_syllabus=syllabus).strip()
         except Exception as e:
             raw_text = ""
             print(f"Generation failed: {e}")
@@ -532,7 +532,7 @@ OUTPUT FORMAT (JSON ONLY):
         """
         
         try:
-            raw_text = generate_ai_content(prompt)
+            raw_text = cached_generate_ai_content('generate_exam_strategy', prompt, exam_syllabus=syllabus)
         except Exception as e:
             # handle error appropriately
             raw_text = ""

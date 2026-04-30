@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 class LectureNote(models.Model):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     title = models.CharField(max_length=255)
+    subject = models.CharField(max_length=100, blank=True, null=True)
     file = models.FileField(upload_to='notes/', null=True, blank=True)
     content = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -33,16 +34,26 @@ NOTE_COLORS = [
 
 class StickyNote(models.Model):
     """User-created class notes / sticky notes attached to a lecture (or standalone)."""
+    NOTE_TYPES = [
+        ('lecture', 'Lecture Note'),
+        ('hint', 'Hint'),
+        ('exam', 'Exam Note'),
+        ('formula', 'Formula'),
+    ]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sticky_notes')
     lecture_note = models.ForeignKey(LectureNote, on_delete=models.CASCADE, related_name='sticky_notes', null=True, blank=True)
     title = models.CharField(max_length=255, default='Class Note')
     content = models.TextField(blank=True)
     color = models.CharField(max_length=20, default='#FFF9C4')  # Hex color
+    note_type = models.CharField(max_length=20, choices=NOTE_TYPES, default='lecture')
+    is_pinned = models.BooleanField(default=False)
+    page_number = models.IntegerField(null=True, blank=True)  # PDF page reference
+    source_text = models.TextField(blank=True, null=True)  # Original text dragged from PDF
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-updated_at']
+        ordering = ['-is_pinned', '-updated_at']
 
     def __str__(self):
         return f"{self.title} ({self.user.username})"
@@ -50,10 +61,23 @@ class StickyNote(models.Model):
 
 
 class Question(models.Model):
+    BLOOMS_LEVELS = [
+        ('remember', 'Remember'),
+        ('understand', 'Understand'),
+        ('apply', 'Apply'),
+        ('analyze', 'Analyze'),
+        ('evaluate', 'Evaluate'),
+        ('create', 'Create'),
+    ]
+    QUESTION_TYPES = [
+        ('mcq', 'Multiple Choice'),
+        ('true_false', 'True/False'),
+        ('fill_blank', 'Fill in the Blank'),
+        ('assertion_reason', 'Assertion-Reason'),
+    ]
     lecture_note = models.ForeignKey(LectureNote, on_delete=models.CASCADE, related_name='questions')
-    topic = models.CharField(max_length=255, null=True, blank=True)  # NEW
+    topic = models.CharField(max_length=255, null=True, blank=True)
     question_text = models.TextField()
-
 
     option_a = models.TextField(null=True, blank=True)
     option_b = models.TextField(null=True, blank=True)
@@ -70,10 +94,39 @@ class Question(models.Model):
     explanation = models.TextField(null=True, blank=True)
     difficulty = models.FloatField(default=0.5)
 
+    # Bloom's Taxonomy & Quality
+    blooms_level = models.CharField(max_length=20, choices=BLOOMS_LEVELS, default='understand')
+    question_type = models.CharField(max_length=20, choices=QUESTION_TYPES, default='mcq')
+    is_high_yield = models.BooleanField(default=False)
+    relevance_score = models.FloatField(default=5.0)  # AI-scored 1-10
+    is_starred = models.BooleanField(default=False)
+
+    # Attempt tracking
+    attempt_count = models.IntegerField(default=0)
+    correct_count = models.IntegerField(default=0)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.id} - {self.question_text[:70]}"
+
+
+class Flashcard(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='flashcards')
+    lecture_note = models.ForeignKey(LectureNote, on_delete=models.CASCADE, related_name='flashcards', null=True, blank=True)
+    front = models.TextField()
+    back = models.TextField()
+    
+    # SM-2 fields
+    ease_factor = models.FloatField(default=2.5)
+    interval = models.IntegerField(default=0)
+    repetitions = models.IntegerField(default=0)
+    next_review_date = models.DateTimeField(auto_now_add=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Card for {self.user.username}: {self.front[:30]}"
 
 
 class TopicWeakness(models.Model):
@@ -252,4 +305,19 @@ class ExamConfiguration(models.Model):
 
     def __str__(self):
         return f"Config for {self.exam_syllabus.title} - {self.total_marks}m"
+
+class AIResponseCache(models.Model):
+    lecture_note = models.ForeignKey('LectureNote', on_delete=models.CASCADE, related_name='ai_caches', null=True, blank=True)
+    exam_syllabus = models.ForeignKey('ExamSyllabus', on_delete=models.CASCADE, related_name='ai_caches', null=True, blank=True)
+    action_type = models.CharField(max_length=50) # 'summarize', 'generate_mcqs', 'ai_insights', 'study_plan'
+    response_data = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = []
+
+    def __str__(self):
+        target = self.lecture_note.title if self.lecture_note else (self.exam_syllabus.title if self.exam_syllabus else "Unknown")
+        return f"Cache {self.action_type} for {target}"
 

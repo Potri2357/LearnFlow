@@ -4,11 +4,11 @@ from .views import (
     upload_lecture_note, generate_questions, submit_answer, weak_topics, progress,
     generate_mcqs, get_quiz_questions, submit_mcq_answer, adaptive_quiz_start, generate_study_plan,
     analytics_for_note, recent_weak_topics, next_actions, ai_insights,
-    upload_pdf, get_note_details, quiz_completed, user_profile, get_dashboard_stats,
+    upload_pdf, get_note_details, quiz_completed, user_profile, get_dashboard_stats, get_all_questions,
     RegisterView, NotificationListView, NotificationMarkReadView, 
     NotificationMarkAllReadView, NotificationDeleteView, CurrentUserView,
     LectureNoteListView, LectureNoteDetailView,
-    generate_flashcards, update_question, summarize_lecture,
+    generate_flashcards, get_flashcards, review_flashcard, update_question, summarize_lecture,
     get_weak_topic_explanation, get_lectures_by_topics, generate_lecture_study_aids,
     # Exam preparation views
     upload_exam_syllabus, upload_previous_papers, generate_exam_questions,
@@ -37,6 +37,7 @@ urlpatterns = [
     path("next-actions/", next_actions),
     path("ai-insights/<int:note_id>/", ai_insights),
     path('upload/', upload_lecture_note, name='upload_note'),
+    path('questions/all/', get_all_questions, name='get_all_questions'),
     path('questions/<int:note_id>/generate/', generate_questions, name='generate_questions'),
     path('answer/', submit_answer, name='submit_answer'),
     path('weak-topics/', weak_topics, name='weak_topics'),
@@ -76,6 +77,8 @@ urlpatterns = [
 
     # Flashcards
     path('flashcards/generate/', generate_flashcards, name='generate_flashcards'),
+    path('flashcards/', get_flashcards, name='get_flashcards'),
+    path('flashcards/<int:card_id>/review/', review_flashcard, name='review_flashcard'),
     
     # Lecture Summarization
     path('lectures/<int:note_id>/summarize/', summarize_lecture, name='summarize_lecture'),

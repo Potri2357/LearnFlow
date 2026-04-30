@@ -31,6 +31,7 @@ mermaid.initialize({
 const MermaidDiagram = ({ chart }) => {
   const [svg, setSvg] = useState('');
   const [error, setError] = useState(false);
+  const [zoom, setZoom] = useState(1);
 
   useEffect(() => {
     const renderChart = async () => {
@@ -69,10 +70,25 @@ const MermaidDiagram = ({ chart }) => {
   );
 
   return (
-    <Box sx={{
-      '& svg': { maxWidth: '100%', height: 'auto', display: 'block', mx: 'auto' },
-      '& .node rect, & .node circle, & .node polygon, & .node path': { fill: 'transparent !important', stroke: 'currentColor' },
-    }} dangerouslySetInnerHTML={{ __html: svg }} />
+    <Box sx={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
+      <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 1, zIndex: 10 }}>
+        <Button size="small" variant="contained" onClick={() => setZoom(z => Math.max(0.5, z - 0.2))} sx={{ minWidth: 32, px: 1, bgcolor: 'background.paper', color: 'text.primary', '&:hover': { bgcolor: 'action.hover' } }}>-</Button>
+        <Button size="small" variant="contained" onClick={() => setZoom(1)} sx={{ minWidth: 32, px: 1, bgcolor: 'background.paper', color: 'text.primary', '&:hover': { bgcolor: 'action.hover' } }}>Reset</Button>
+        <Button size="small" variant="contained" onClick={() => setZoom(z => Math.min(3, z + 0.2))} sx={{ minWidth: 32, px: 1, bgcolor: 'background.paper', color: 'text.primary', '&:hover': { bgcolor: 'action.hover' } }}>+</Button>
+      </Box>
+      <Box sx={{
+        width: '100%', overflow: 'auto', p: 2,
+        cursor: 'grab', '&:active': { cursor: 'grabbing' },
+      }}>
+        <Box sx={{
+          transform: `scale(${zoom})`,
+          transformOrigin: 'top left',
+          transition: 'transform 0.2s ease',
+          '& svg': { maxWidth: '100%', height: 'auto', display: 'block' },
+          '& .node rect, & .node circle, & .node polygon, & .node path': { fill: 'transparent !important', stroke: 'currentColor' },
+        }} dangerouslySetInnerHTML={{ __html: svg }} />
+      </Box>
+    </Box>
   );
 };
 
@@ -117,38 +133,44 @@ export default function SummarizeLectures() {
   const selectedTitle = lectures.find(l => l.id === selectedLecture)?.title;
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', color: 'text.primary', pb: 8 }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', color: 'text.primary', pb: 8 }} className="animate-fade-in-up">
       {/* === HEADER === */}
       <Box sx={{
           bgcolor: 'background.paper',
           borderBottom: '1px solid', borderColor: 'divider',
-          px: { xs: 2, md: 4 }, py: 3
+          px: { xs: 2, md: 4 }, py: 3,
+          boxShadow: '0 1px 4px rgba(15,23,42,0.04)',
       }}>
           <Container maxWidth="xl">
-              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { md: 'center' }, gap: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { md: 'center' }, gap: 2.5 }}>
                   <Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                          <Box sx={{ p: 1, borderRadius: '8px', bgcolor: 'rgba(19,127,236,0.1)', color: 'primary.main', display: 'flex' }}>
-                              <PsychologyIcon fontSize="small" />
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.75 }}>
+                          <Box sx={{
+                              p: 1, borderRadius: '10px',
+                              background: 'linear-gradient(135deg, #2563EB, #7C3AED)',
+                              display: 'flex', boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
+                          }}>
+                              <PsychologyIcon sx={{ fontSize: 20, color: '#fff' }} />
                           </Box>
-                          <Typography variant="h4" fontWeight={900} sx={{ letterSpacing: '-0.02em' }}>
+                          <Typography variant="h4" fontWeight={900} sx={{ letterSpacing: '-0.025em', lineHeight: 1 }}>
                               Lecture Summarizer
                           </Typography>
-                          {summary && <Chip label="Summary Ready" color="success" size="small" sx={{ fontWeight: 700 }} />}
+                          {summary && <Chip label="Ready" color="success" size="small" sx={{ fontWeight: 800, height: 22, fontSize: '0.72rem' }} />}
                       </Box>
-                      <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                      <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ pl: 0.5 }}>
                           AI-powered summaries with key concepts, definitions, and visual flowcharts
                       </Typography>
                   </Box>
 
                   {/* Controls */}
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
                       <FormControl sx={{ minWidth: 240 }} size="small">
-                          <InputLabel>Select Lecture</InputLabel>
+                          <InputLabel sx={{ fontWeight: 600 }}>Select Lecture</InputLabel>
                           <Select
                               value={selectedLecture}
                               label="Select Lecture"
                               onChange={(e) => { setSelectedLecture(e.target.value); setSummary(null); }}
+                              sx={{ bgcolor: 'background.paper', borderRadius: '10px' }}
                           >
                               {lecturesLoading && <MenuItem disabled>Loading...</MenuItem>}
                               {lectures.map((l) => (
@@ -166,7 +188,11 @@ export default function SummarizeLectures() {
                           startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <AutoAwesomeIcon />}
                           onClick={handleGenerate}
                           disabled={loading || !selectedLecture}
-                          sx={{ fontWeight: 700, px: 3, boxShadow: '0 4px 14px 0 rgba(19, 127, 236, 0.4)', whiteSpace: 'nowrap' }}
+                          sx={{
+                              fontWeight: 700, px: 3, whiteSpace: 'nowrap',
+                              boxShadow: '0 4px 14px rgba(37,99,235,0.30)',
+                              '&:not(:disabled):hover': { boxShadow: '0 6px 20px rgba(37,99,235,0.4)' },
+                          }}
                       >
                           {loading ? 'Summarizing...' : 'Generate Summary'}
                       </Button>
@@ -191,21 +217,35 @@ export default function SummarizeLectures() {
           {!summary && !loading && (
               <Paper sx={{
                   p: { xs: 6, md: 10 }, textAlign: 'center',
-                  borderRadius: '20px', border: '1px dashed', borderColor: 'divider',
-                  bgcolor: 'background.paper'
+                  borderRadius: '24px', border: '1.5px dashed', borderColor: 'divider',
+                  bgcolor: 'background.paper', boxShadow: 'none',
               }}>
-                  <Box sx={{ width: 96, height: 96, borderRadius: '20px', bgcolor: 'rgba(19,127,236,0.08)', border: '2px solid rgba(19,127,236,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 3 }}>
-                      <AutoAwesomeIcon sx={{ fontSize: 48, color: 'primary.main' }} />
+                  <Box sx={{
+                      width: 100, height: 100, borderRadius: '24px', mx: 'auto', mb: 3,
+                      background: 'linear-gradient(135deg, rgba(37,99,235,0.08) 0%, rgba(124,58,237,0.06) 100%)',
+                      border: '2px solid rgba(37,99,235,0.12)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                      <AutoAwesomeIcon sx={{ fontSize: 52, color: 'primary.main', opacity: 0.8 }} />
                   </Box>
-                  <Typography variant="h4" fontWeight={800} gutterBottom>
+                  <Typography variant="h4" fontWeight={800} gutterBottom sx={{ letterSpacing: '-0.02em' }}>
                       AI-Powered Summaries
                   </Typography>
-                  <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 480, mx: 'auto', lineHeight: 1.7 }}>
-                      Select a lecture above and click "Generate Summary" to receive a structured breakdown with key concepts, definitions, relationships, and a visual flowchart.
+                  <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 500, mx: 'auto', lineHeight: 1.75 }}>
+                      Select a lecture above and click <strong>Generate Summary</strong> to receive a structured breakdown with key concepts, definitions, relationships, and a visual flowchart.
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-                      {['Key Concepts', 'Definitions', 'Visual Flowchart', 'Concept Relationships'].map(f => (
-                          <Chip key={f} label={f} size="small" sx={{ fontWeight: 600 }} icon={<CheckCircleIcon sx={{ fontSize: '14px !important' }} />} />
+                  <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
+                      {[
+                        { label: 'Key Concepts', color: '#2563EB' },
+                        { label: 'Definitions', color: '#7C3AED' },
+                        { label: 'Visual Flowchart', color: '#06B6D4' },
+                        { label: 'Relationships', color: '#10B981' },
+                      ].map(({ label, color }) => (
+                          <Chip
+                              key={label} label={label} size="small"
+                              icon={<CheckCircleIcon sx={{ fontSize: '14px !important', color: `${color} !important` }} />}
+                              sx={{ fontWeight: 600, bgcolor: `${color}12`, color, border: `1px solid ${color}30` }}
+                          />
                       ))}
                   </Box>
               </Paper>
@@ -228,12 +268,18 @@ export default function SummarizeLectures() {
                       </Box>
                   </Paper>
 
-                  {/* Overview */}
+                  {/* Overview & TL;DR */}
                   <Paper sx={{ p: 4, borderRadius: '16px', border: '1px solid', borderColor: 'divider' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
                           <LectureIcon color="primary" />
-                          <Typography variant="h6" fontWeight={700}>Overview</Typography>
+                          <Typography variant="h6" fontWeight={700}>Overview & TL;DR</Typography>
                       </Box>
+                      {summary.tldr && (
+                        <Box sx={{ mb: 3, p: 2, borderRadius: 2, bgcolor: 'rgba(16,185,129,0.1)', borderLeft: '4px solid #10B981' }}>
+                          <Typography variant="subtitle2" fontWeight={800} color="#10B981" gutterBottom>TL;DR</Typography>
+                          <Typography variant="body2" color="text.primary" fontWeight={600}>{summary.tldr}</Typography>
+                        </Box>
+                      )}
                       <Typography variant="body1" sx={{ lineHeight: 1.9, color: 'text.primary', opacity: 0.9 }}>
                           {summary.overview}
                       </Typography>
@@ -244,32 +290,40 @@ export default function SummarizeLectures() {
                       <Box>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
                               <ConceptIcon color="primary" />
-                              <Typography variant="h5" fontWeight={700}>Key Concepts</Typography>
-                              <Chip label={`${summary.key_concepts.length} concepts`} size="small" sx={{ fontWeight: 600 }} />
+                              <Typography variant="h5" fontWeight={800} sx={{ letterSpacing: '-0.01em' }}>Key Concepts</Typography>
+                              <Chip label={`${summary.key_concepts.length} concepts`} size="small" sx={{ fontWeight: 700, bgcolor: 'rgba(37,99,235,0.08)', color: 'primary.main' }} />
                           </Box>
                           <Grid container spacing={2}>
                               {summary.key_concepts.map((concept, idx) => {
                                   const meta = importanceMeta[concept.importance] || importanceMeta.medium;
+                                  const dotColors = { high: '#EF4444', medium: '#F59E0B', low: '#10B981' };
                                   return (
                                       <Grid item xs={12} sm={6} xl={4} key={idx}>
                                           <Paper sx={{
                                               p: 3, height: '100%',
-                                              borderRadius: '12px',
+                                              borderRadius: '16px',
                                               border: '1px solid', borderColor: 'divider',
-                                              transition: 'transform 0.2s, box-shadow 0.2s',
-                                              '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] }
+                                              position: 'relative', overflow: 'hidden',
+                                              transition: 'all 0.22s ease',
+                                              '&:hover': { transform: 'translateY(-3px)', boxShadow: '0 10px 28px rgba(15,23,42,0.10)', borderColor: 'primary.light' },
+                                              '&::before': {
+                                                  content: '""', position: 'absolute', top: 0, left: 0, width: 4, bottom: 0,
+                                                  bgcolor: dotColors[concept.importance] || '#F59E0B',
+                                              },
                                           }}>
-                                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-                                                  <Typography variant="h6" fontWeight={700} sx={{ flex: 1, pr: 1 }}>{concept.name}</Typography>
+                                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5, pl: 1 }}>
+                                                  <Typography variant="h6" fontWeight={800} sx={{ flex: 1, pr: 1, fontSize: '0.95rem', letterSpacing: '-0.01em' }}>{concept.name}</Typography>
                                                   <Chip
                                                       label={meta.label}
                                                       size="small"
-                                                      color={meta.color}
-                                                      variant="outlined"
-                                                      sx={{ fontWeight: 700, flexShrink: 0, fontSize: '0.65rem' }}
+                                                      sx={{
+                                                          fontWeight: 700, flexShrink: 0, fontSize: '0.65rem', height: 20,
+                                                          bgcolor: `${dotColors[concept.importance] || '#F59E0B'}18`,
+                                                          color: dotColors[concept.importance] || '#F59E0B',
+                                                      }}
                                                   />
                                               </Box>
-                                              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+                                              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.75, pl: 1 }}>
                                                   {concept.description}
                                               </Typography>
                                           </Paper>
@@ -335,6 +389,46 @@ export default function SummarizeLectures() {
                               {summary.relationships}
                           </Typography>
                       </Paper>
+                  )}
+
+                  {/* Exam Bullets & Memory Anchors */}
+                  {(summary.exam_bullets?.length > 0 || summary.memory_anchors?.length > 0) && (
+                      <Grid container spacing={3}>
+                          {summary.exam_bullets?.length > 0 && (
+                            <Grid item xs={12} md={6}>
+                                <Paper sx={{ p: 4, borderRadius: '16px', border: '1px solid', borderColor: 'divider', height: '100%' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+                                        <TrendingUpIcon sx={{ color: '#F59E0B' }} />
+                                        <Typography variant="h6" fontWeight={700}>High-Yield Exam Bullets</Typography>
+                                    </Box>
+                                    <Box component="ul" sx={{ m: 0, pl: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                        {summary.exam_bullets.map((bullet, i) => (
+                                            <Typography component="li" variant="body2" key={i} sx={{ lineHeight: 1.6 }}>
+                                                {bullet}
+                                            </Typography>
+                                        ))}
+                                    </Box>
+                                </Paper>
+                            </Grid>
+                          )}
+                          {summary.memory_anchors?.length > 0 && (
+                            <Grid item xs={12} md={6}>
+                                <Paper sx={{ p: 4, borderRadius: '16px', border: '1px solid', borderColor: 'divider', height: '100%' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+                                        <PsychologyIcon sx={{ color: '#8B5CF6' }} />
+                                        <Typography variant="h6" fontWeight={700}>Memory Anchors & Mnemonics</Typography>
+                                    </Box>
+                                    <Box component="ul" sx={{ m: 0, pl: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                        {summary.memory_anchors.map((anchor, i) => (
+                                            <Typography component="li" variant="body2" key={i} sx={{ lineHeight: 1.6 }}>
+                                                {anchor}
+                                            </Typography>
+                                        ))}
+                                    </Box>
+                                </Paper>
+                            </Grid>
+                          )}
+                      </Grid>
                   )}
 
                   {/* Flowchart */}

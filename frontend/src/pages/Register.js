@@ -1,277 +1,420 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import './Auth.css';
+import React, { useMemo, useState } from "react";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
+import {
+  Alert,
+  Box,
+  Button,
+  Container,
+  Divider,
+  Grid,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import {
+  ArrowForward as ArrowForwardIcon,
+  CheckCircleOutline as CheckCircleOutlineIcon,
+  PersonAdd as PersonAddIcon,
+  School as SchoolIcon,
+  Star as StarIcon,
+} from "@mui/icons-material";
+import { useAuth } from "../context/AuthContext";
 
-import { IconButton } from '@mui/material';
-import { 
-  Brightness4, 
-  Brightness7,
-  Person,
-  Email,
-  Lock,
-  AccountCircle,
-  School,
-  AutoAwesome,
-  EmojiObjects,
-  TrendingUp,
-  Stars,
-  Rocket,
-  Psychology,
-  MenuBook
-} from '@mui/icons-material';
-import { useColorMode } from '../context/ThemeContext';
+const promises = [
+  "Organize lectures, quizzes, and flashcards in one workspace",
+  "Keep study plans and weak-topic reviews easy to revisit",
+  "Get a dashboard that highlights the next best action",
+];
+
+const passwordRules = [
+  "Use at least 8 characters.",
+  "Include a mix of letters and numbers when possible.",
+  "Make sure both password fields match before submitting.",
+];
 
 export default function Register() {
   const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    password2: '',
-    first_name: '',
-    last_name: ''
+    username: "",
+    email: "",
+    password: "",
+    password2: "",
+    first_name: "",
+    last_name: "",
   });
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  
-  const { register, login } = useAuth();
-  const { mode, toggleColorMode } = useColorMode();
+
+  const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  const passwordsMatch = useMemo(
+    () => formData.password.length === 0 || formData.password === formData.password2,
+    [formData.password, formData.password2],
+  );
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((current) => ({ ...current, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
+
     if (formData.password !== formData.password2) {
-      setError('Passwords do not match');
+      setError("Passwords do not match.");
       return;
     }
-    
+
     setLoading(true);
     const result = await register(formData);
-    
+
     if (result.success) {
-      // Auto-login after registration
-      await login(formData.username, formData.password);
-      navigate('/upload'); // Redirect to upload page after registration
-    } else {
-      let errorMessage = 'Registration failed. Please try again.';
-      if (typeof result.error === 'string') {
-        errorMessage = result.error;
-      } else if (result.error && typeof result.error === 'object') {
-        // Extract values from the error object
-        const values = Object.values(result.error).flat();
-        if (values.length > 0) {
-          errorMessage = values[0];
-        }
-      }
-      setError(errorMessage);
+      navigate("/dashboard");
+      return;
     }
-    
+
+    let errorMessage = "Registration failed. Please try again.";
+    if (typeof result.error === "string") {
+      errorMessage = result.error;
+    } else if (result.error && typeof result.error === "object") {
+      const values = Object.values(result.error).flat();
+      if (values.length > 0) {
+        errorMessage = values[0];
+      }
+    }
+
+    setError(errorMessage);
     setLoading(false);
   };
 
   return (
-    <div className="auth-container">
-      <div style={{ position: 'absolute', top: 20, right: 20 }}>
-        <IconButton 
-          onClick={toggleColorMode} 
-          sx={{ 
-            color: 'white',
-            border: '1px solid rgba(255,255,255,0.3)',
-            '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }
-          }}
-        >
-          {mode === 'dark' ? <Brightness7 /> : <Brightness4 />}
-        </IconButton>
-      </div>
-      
-      {/* Floating Decorative Icons */}
-      <div style={{ position: 'absolute', top: '10%', left: '5%', opacity: 0.1, zIndex: 1 }}>
-        <AutoAwesome sx={{ fontSize: 80, color: 'white' }} />
-      </div>
-      <div style={{ position: 'absolute', top: '30%', right: '8%', opacity: 0.1, zIndex: 1 }}>
-        <EmojiObjects sx={{ fontSize: 60, color: 'white' }} />
-      </div>
-      <div style={{ position: 'absolute', bottom: '15%', left: '10%', opacity: 0.1, zIndex: 1 }}>
-        <TrendingUp sx={{ fontSize: 70, color: 'white' }} />
-      </div>
-      <div style={{ position: 'absolute', top: '50%', left: '3%', opacity: 0.08, zIndex: 1 }}>
-        <School sx={{ fontSize: 90, color: 'white' }} />
-      </div>
-      <div style={{ position: 'absolute', top: '70%', right: '5%', opacity: 0.08, zIndex: 1 }}>
-        <AutoAwesome sx={{ fontSize: 65, color: 'white', transform: 'rotate(45deg)' }} />
-      </div>
-      <div style={{ position: 'absolute', top: '20%', left: '50%', opacity: 0.06, zIndex: 1 }}>
-        <EmojiObjects sx={{ fontSize: 55, color: 'white', transform: 'rotate(-20deg)' }} />
-      </div>
-      <div style={{ position: 'absolute', bottom: '30%', right: '12%', opacity: 0.09, zIndex: 1 }}>
-        <TrendingUp sx={{ fontSize: 75, color: 'white', transform: 'rotate(15deg)' }} />
-      </div>
-      <div style={{ position: 'absolute', bottom: '5%', right: '50%', opacity: 0.07, zIndex: 1 }}>
-        <School sx={{ fontSize: 50, color: 'white', transform: 'rotate(-30deg)' }} />
-      </div>
-      <div style={{ position: 'absolute', top: '15%', right: '15%', opacity: 0.09, zIndex: 1 }}>
-        <Stars sx={{ fontSize: 55, color: 'white', transform: 'rotate(25deg)' }} />
-      </div>
-      <div style={{ position: 'absolute', top: '60%', left: '8%', opacity: 0.08, zIndex: 1 }}>
-        <Rocket sx={{ fontSize: 70, color: 'white', transform: 'rotate(-15deg)' }} />
-      </div>
-      <div style={{ position: 'absolute', bottom: '40%', right: '6%', opacity: 0.07, zIndex: 1 }}>
-        <Psychology sx={{ fontSize: 60, color: 'white', transform: 'rotate(20deg)' }} />
-      </div>
-      <div style={{ position: 'absolute', top: '40%', right: '50%', opacity: 0.06, zIndex: 1 }}>
-        <MenuBook sx={{ fontSize: 65, color: 'white', transform: 'rotate(-25deg)' }} />
-      </div>
-      <div style={{ position: 'absolute', bottom: '20%', left: '50%', opacity: 0.08, zIndex: 1 }}>
-        <Stars sx={{ fontSize: 45, color: 'white', transform: 'rotate(60deg)' }} />
-      </div>
-      <div style={{ position: 'absolute', top: '80%', left: '15%', opacity: 0.07, zIndex: 1 }}>
-        <Rocket sx={{ fontSize: 50, color: 'white', transform: 'rotate(35deg)' }} />
-      </div>
-      
-      <div className="auth-card enhanced-card">
-        {/* Logo */}
-        <div className="auth-logo">
-          <div className="logo-icon">
-            <School sx={{ fontSize: 48, color: '#2563eb' }} />
-          </div>
-        </div>
-        
-        <div className="auth-header">
-          <h1 className="gradient-text">Create Account</h1>
-          <p className="auth-subtitle">Join us to start your learning journey</p>
-        </div>
-        
-        {error && <div className="error-message">{error}</div>}
-        
-        <form onSubmit={handleSubmit}>
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="first_name">
-                <Person sx={{ fontSize: 18, mr: 0.5, verticalAlign: 'middle' }} />
-                First Name
-              </label>
-              <input
-                type="text"
-                id="first_name"
-                name="first_name"
-                value={formData.first_name}
-                onChange={handleChange}
-                className="enhanced-input"
-              />
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="last_name">
-                <Person sx={{ fontSize: 18, mr: 0.5, verticalAlign: 'middle' }} />
-                Last Name
-              </label>
-              <input
-                type="text"
-                id="last_name"
-                name="last_name"
-                value={formData.last_name}
-                onChange={handleChange}
-                className="enhanced-input"
-              />
-            </div>
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="username">
-              <AccountCircle sx={{ fontSize: 18, mr: 0.5, verticalAlign: 'middle' }} />
-              Username *
-            </label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              required
-              className="enhanced-input"
-            />
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="email">
-              <Email sx={{ fontSize: 18, mr: 0.5, verticalAlign: 'middle' }} />
-              Email *
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="enhanced-input"
-            />
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="password">
-              <Lock sx={{ fontSize: 18, mr: 0.5, verticalAlign: 'middle' }} />
-              Password *
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              className="enhanced-input"
-            />
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="password2">
-              <Lock sx={{ fontSize: 18, mr: 0.5, verticalAlign: 'middle' }} />
-              Confirm Password *
-            </label>
-            <input
-              type="password"
-              id="password2"
-              name="password2"
-              value={formData.password2}
-              onChange={handleChange}
-              required
-              className="enhanced-input"
-            />
-          </div>
-          
-          <button type="submit" className="btn-primary btn-gradient" disabled={loading}>
-            {loading ? 'Creating account...' : 'Create Account'}
-          </button>
-        </form>
-        
-        <div className="divider">
-          <span>or</span>
-        </div>
-        
-        <button className="btn-google" onClick={() => alert('Google OAuth not configured yet')}>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17.64 9.20443C17.64 8.56625 17.5827 7.95262 17.4764 7.36353H9V10.8449H13.8436C13.635 11.9699 13.0009 12.9231 12.0477 13.5613V15.8194H14.9564C16.6582 14.2526 17.64 11.9453 17.64 9.20443Z" fill="#4285F4"/>
-            <path d="M8.99976 18C11.4298 18 13.467 17.1941 14.9561 15.8195L12.0475 13.5613C11.2416 14.1013 10.2107 14.4204 8.99976 14.4204C6.65567 14.4204 4.67158 12.8372 3.96385 10.71H0.957031V13.0418C2.43794 15.9831 5.48158 18 8.99976 18Z" fill="#34A853"/>
-            <path d="M3.96409 10.7098C3.78409 10.1698 3.68182 9.59301 3.68182 8.99983C3.68182 8.40665 3.78409 7.82983 3.96409 7.28983V4.95801H0.957273C0.347727 6.17301 0 7.54756 0 8.99983C0 10.4521 0.347727 11.8266 0.957273 13.0416L3.96409 10.7098Z" fill="#FBBC05"/>
-            <path d="M8.99976 3.57955C10.3211 3.57955 11.5075 4.03364 12.4402 4.92545L15.0216 2.34409C13.4629 0.891818 11.4257 0 8.99976 0C5.48158 0 2.43794 2.01682 0.957031 4.95818L3.96385 7.29C4.67158 5.16273 6.65567 3.57955 8.99976 3.57955Z" fill="#EA4335"/>
-          </svg>
-          Continue with Google
-        </button>
-        
-        <p className="auth-footer">
-          Already have an account? <Link to="/login" className="link-gradient">Sign in</Link>
-        </p>
-      </div>
-    </div>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        background:
+          "radial-gradient(circle at top left, rgba(37,99,235,0.12) 0, transparent 28%), radial-gradient(circle at 85% 18%, rgba(124,58,237,0.12) 0, transparent 24%), linear-gradient(180deg, #F7FAFF 0%, #EEF4FF 100%)",
+        py: { xs: 3, md: 5 },
+      }}
+    >
+      <Container maxWidth="lg">
+        <Grid container spacing={3.5} alignItems="stretch">
+          <Grid item xs={12} md={5} sx={{ display: "flex" }}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 3, md: 4 },
+                borderRadius: 4,
+                color: "#fff",
+                background:
+                  "linear-gradient(160deg, #1D4ED8 0%, #5B21B6 58%, #C026D3 100%)",
+                boxShadow: "0 24px 70px rgba(37,99,235,0.28)",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                minHeight: { md: 720 },
+                width: "100%",
+              }}
+            >
+              <Stack spacing={3}>
+                <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1.2 }}>
+                  <Box
+                    sx={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 2,
+                      bgcolor: "rgba(255,255,255,0.18)",
+                      display: "grid",
+                      placeItems: "center",
+                      fontWeight: 900,
+                    }}
+                  >
+                    LF
+                  </Box>
+                  <Box>
+                    <Typography sx={{ fontWeight: 900, color: "inherit" }}>
+                      LearnFlow
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: "rgba(255,255,255,0.8)" }}
+                    >
+                      Premium light-first study workspace
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Box>
+                  <Typography
+                    variant="overline"
+                    sx={{ color: "rgba(255,255,255,0.82)", letterSpacing: "0.14em" }}
+                  >
+                    Create account
+                  </Typography>
+                  <Typography
+                    variant="h3"
+                    sx={{
+                      mt: 1,
+                      fontWeight: 900,
+                      letterSpacing: "-0.04em",
+                      color: "inherit",
+                    }}
+                  >
+                    Start with a calmer study workspace.
+                  </Typography>
+                  <Typography
+                    sx={{
+                      mt: 2,
+                      color: "rgba(255,255,255,0.9)",
+                      maxWidth: 440,
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    Join LearnFlow to capture lectures, practice actively, and plan
+                    the next session without switching tools.
+                  </Typography>
+                </Box>
+
+                <Stack spacing={1.5}>
+                  {promises.map((promise) => (
+                    <Box
+                      key={promise}
+                      sx={{ display: "flex", gap: 1.2, alignItems: "flex-start" }}
+                    >
+                      <Box
+                        sx={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: "50%",
+                          bgcolor: "rgba(255,255,255,0.16)",
+                          display: "grid",
+                          placeItems: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <StarIcon sx={{ fontSize: 14, color: "#fff" }} />
+                      </Box>
+                      <Typography sx={{ color: "rgba(255,255,255,0.92)" }}>
+                        {promise}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Stack>
+
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 3,
+                    bgcolor: "rgba(255,255,255,0.12)",
+                    border: "1px solid rgba(255,255,255,0.16)",
+                  }}
+                >
+                  <Typography sx={{ fontWeight: 800, color: "inherit" }}>
+                    What you get first
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: "rgba(255,255,255,0.84)", mt: 0.5 }}
+                  >
+                    A dashboard, lectures library, quiz flow, flashcards, and study
+                    plan in one place.
+                  </Typography>
+                </Box>
+              </Stack>
+
+              <Box sx={{ mt: 4, display: { xs: "none", md: "block" } }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1.5,
+                    alignItems: "center",
+                    p: 2,
+                    borderRadius: 3,
+                    bgcolor: "rgba(255,255,255,0.12)",
+                    border: "1px solid rgba(255,255,255,0.14)",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 2,
+                      display: "grid",
+                      placeItems: "center",
+                      bgcolor: "rgba(255,255,255,0.16)",
+                    }}
+                  >
+                    <SchoolIcon />
+                  </Box>
+                  <Box>
+                    <Typography sx={{ fontWeight: 800, color: "inherit" }}>
+                      Built for momentum
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{ color: "rgba(255,255,255,0.84)" }}
+                    >
+                      The first screen points you to the next step.
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+            </Paper>
+          </Grid>
+
+          <Grid item xs={12} md={7} sx={{ display: "flex" }}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 3, md: 4 },
+                borderRadius: 4,
+                border: "1px solid",
+                borderColor: "divider",
+                bgcolor: "rgba(255,255,255,0.92)",
+                boxShadow: "0 20px 54px rgba(19,32,58,0.10)",
+                width: "100%",
+              }}
+            >
+              <Stack spacing={3} component="form" onSubmit={handleSubmit}>
+                <Box>
+                  <Typography
+                    variant="overline"
+                    sx={{ color: "secondary.main", fontWeight: 800 }}
+                  >
+                    Sign up
+                  </Typography>
+                  <Typography
+                    variant="h4"
+                    sx={{ mt: 0.5, fontWeight: 900, letterSpacing: "-0.04em" }}
+                  >
+                    Create your LearnFlow account
+                  </Typography>
+                  <Typography color="text.secondary" sx={{ mt: 1 }}>
+                    Set up your learning profile in less than a minute.
+                  </Typography>
+                </Box>
+
+                {error ? <Alert severity="error">{error}</Alert> : null}
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="First name"
+                      name="first_name"
+                      value={formData.first_name}
+                      onChange={handleChange}
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Last name"
+                      name="last_name"
+                      value={formData.last_name}
+                      onChange={handleChange}
+                      fullWidth
+                    />
+                  </Grid>
+                </Grid>
+
+                <TextField
+                  label="Username"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  autoComplete="username"
+                  required
+                  fullWidth
+                />
+                <TextField
+                  label="Email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  autoComplete="email"
+                  required
+                  fullWidth
+                />
+                <TextField
+                  label="Password"
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  autoComplete="new-password"
+                  required
+                  fullWidth
+                  helperText="Choose a password you can re-enter on another device."
+                />
+                <TextField
+                  label="Confirm password"
+                  name="password2"
+                  type="password"
+                  value={formData.password2}
+                  onChange={handleChange}
+                  autoComplete="new-password"
+                  required
+                  error={!passwordsMatch}
+                  helperText={!passwordsMatch ? "Passwords must match." : " "}
+                  fullWidth
+                />
+
+                <Box
+                  sx={{
+                    p: 2.25,
+                    borderRadius: 3,
+                    bgcolor: "rgba(37,99,235,0.06)",
+                    border: "1px solid rgba(37,99,235,0.14)",
+                  }}
+                >
+                  <Typography sx={{ fontWeight: 800, mb: 1 }}>
+                    Password guidance
+                  </Typography>
+                  <Stack spacing={0.8}>
+                    {passwordRules.map((rule) => (
+                      <Box key={rule} sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+                        <CheckCircleOutlineIcon
+                          sx={{ fontSize: 18, color: "primary.main", mt: 0.2 }}
+                        />
+                        <Typography variant="body2" color="text.secondary">
+                          {rule}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Box>
+
+                <Button
+                  type="submit"
+                  variant="contained"
+                  size="large"
+                  disabled={loading}
+                  endIcon={<ArrowForwardIcon />}
+                >
+                  {loading ? "Creating account..." : "Create account"}
+                </Button>
+
+                <Divider>
+                  <Typography variant="caption" sx={{ color: "text.secondary", px: 1 }}>
+                    Already have an account?
+                  </Typography>
+                </Divider>
+
+                <Button
+                  component={RouterLink}
+                  to="/login"
+                  variant="text"
+                  startIcon={<PersonAddIcon />}
+                >
+                  Sign in instead
+                </Button>
+              </Stack>
+            </Paper>
+          </Grid>
+        </Grid>
+      </Container>
+    </Box>
   );
 }

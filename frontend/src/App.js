@@ -1,6 +1,6 @@
 // App.jsx
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import SidebarLayout from "./layout/SidebarLayout";
 
@@ -26,7 +26,7 @@ import SummarizeLectures from "./pages/SummarizeLectures";
 import ExamPreparation from "./pages/ExamPreparation";
 import LandingPage from "./pages/LandingPage";
 import ConceptCoach from "./pages/ConceptCoach";
-import RubricEvaluator from "./pages/RubricEvaluator";
+import QuestionBank from "./pages/QuestionBank";
 
 import { CssBaseline } from "@mui/material";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -45,7 +45,7 @@ export default function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/google-login" element={<GoogleLogin />} />
             <Route path="/auth/google/callback" element={<GoogleCallback />} />
-            
+
             {/* Protected routes with sidebar */}
             <Route path="/" element={<SidebarLayout />}>
               <Route path="dashboard" element={<Dashboard />} />
@@ -53,12 +53,12 @@ export default function App() {
               <Route path="quiz" element={<QuizEntry />} />
               {/* Quiz wrapper for detailed view if needed */}
               <Route path="quiz/:noteId" element={<QuizWrapper />} />
-              
+
               <Route path="weak-topics/:noteId" element={<WeakTopicsPage />} />
-              
+
               {/* Analysis points to StudyPlan now */}
-              <Route path="analysis" element={<StudyPlanPage />} /> 
-              <Route path="study-plan" element={<StudyPlanPage />} /> 
+              <Route path="analysis" element={<StudyPlanPage />} />
+              <Route path="study-plan" element={<StudyPlanPage />} />
 
               <Route path="weak-topics" element={<WeakTopicsEntry />} />
               <Route path="profile" element={<Profile />} />
@@ -68,9 +68,9 @@ export default function App() {
               <Route path="summarize" element={<SummarizeLectures />} />
               <Route path="exam-preparation" element={<ExamPreparation />} />
               <Route path="concept-coach" element={<ConceptCoach />} />
-              <Route path="rubric-evaluator" element={<RubricEvaluator />} />
+              <Route path="question-bank" element={<QuestionBank />} />
             </Route>
-            
+
             {/* Active Quiz Environment (Fullscreen) */}
             <Route path="/quiz-mode" element={<QuizPage />} />
           </Routes>

@@ -17,6 +17,9 @@
 | 📄 **Lecture Summarizer** | Automatically summarizes lengthy lecture PDFs |
 | 📊 **Study Plan** | Long-term AI study plans based on your weaknesses |
 | 📈 **Analytics Dashboard** | Real-time mastery tracking, streaks, and performance metrics |
+| 🏷️ **Subject Intelligence** | Auto-detected subjects with color-coded grouping across lectures, weak topics, and planning |
+| 📌 **Sticky Notes Sidebar** | Drag selected PDF text into categorized notes (Lecture, Hint, Exam, Formula) |
+| 🏦 **Question Bank** | Search/filter questions by subject and Bloom level with quick-attempt and export |
 | 🔐 **Auth System** | JWT + Google OAuth 2.0 |
 
 ---

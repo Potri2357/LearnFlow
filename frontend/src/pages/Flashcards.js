@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Container, Typography, Box, CircularProgress, Alert, Button, 
   MenuItem, Select, FormControl, InputLabel, Chip, IconButton,
-  Paper, LinearProgress, Grid, Divider, useTheme, Tooltip
+  Paper, LinearProgress, Grid, Divider, useTheme, Tooltip,
+  Tab, Tabs, Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
 import { 
   ArrowForward as NextIcon,
@@ -33,6 +34,7 @@ export default function Flashcards() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [bookmarked, setBookmarked] = useState(new Set());
@@ -51,6 +53,24 @@ export default function Flashcards() {
     });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    if (!selectedLecture) {
+      setFlashcards([]);
+      return;
+    }
+    setLoading(true);
+    API.get(`flashcards/?note_id=${selectedLecture}`)
+       .then(res => {
+           setFlashcards(res.data || []);
+           setCurrentIndex(0);
+           setIsFlipped(false);
+           setSessionComplete(false);
+           setRatings({});
+       })
+       .catch(err => setError("Failed to load cards."))
+       .finally(() => setLoading(false));
+  }, [selectedLecture]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -80,8 +100,9 @@ export default function Flashcards() {
     setSessionComplete(false);
 
     try {
-      const res = await API.post('flashcards/generate/', { note_id: selectedLecture, count: 15 });
-      setFlashcards(res.data.flashcards || []);
+      await API.post('flashcards/generate/', { note_id: selectedLecture, count: 15 });
+      const res = await API.get(`flashcards/?note_id=${selectedLecture}`);
+      setFlashcards(res.data || []);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to generate flashcards. Please try again.');
     } finally {
@@ -106,8 +127,12 @@ export default function Flashcards() {
     setTimeout(() => setCurrentIndex(i => i - 1), 150);
   }, [currentIndex]);
 
-  const handleRate = (rating) => {
+  const handleRate = async (rating) => {
+    const card = flashcards[currentIndex];
     setRatings(r => ({ ...r, [currentIndex]: rating }));
+    try {
+        if(card.id) await API.post(`flashcards/${card.id}/review/`, { rating });
+    } catch(e) { console.error(e) }
     handleNext();
   };
 
@@ -226,6 +251,15 @@ export default function Flashcards() {
           </Container>
       )}
 
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', px: { xs: 2, md: 4 } }}>
+          <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)}>
+              <Tab label="Study Session" sx={{ fontWeight: 700 }} />
+              <Tab label="Flashcard Browser" sx={{ fontWeight: 700 }} />
+          </Tabs>
+      </Box>
+
+      {activeTab === 0 && (
       <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           {/* === SIDEBAR === */}
           <Box sx={{ 
@@ -638,6 +672,40 @@ export default function Flashcards() {
               )}
           </Box>
       </Box>
+      )}
+
+      {activeTab === 1 && (
+          <Box sx={{ flex: 1, p: { xs: 2, md: 4 }, overflowY: 'auto' }}>
+              <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '16px' }}>
+                  <Table>
+                      <TableHead sx={{ bgcolor: 'action.hover' }}>
+                          <TableRow>
+                              <TableCell sx={{ fontWeight: 800 }}>Front (Concept)</TableCell>
+                              <TableCell sx={{ fontWeight: 800 }}>Back (Answer)</TableCell>
+                              <TableCell sx={{ fontWeight: 800 }}>Ease Factor</TableCell>
+                              <TableCell sx={{ fontWeight: 800 }}>Interval (Days)</TableCell>
+                          </TableRow>
+                      </TableHead>
+                      <TableBody>
+                          {flashcards.length === 0 ? (
+                              <TableRow>
+                                  <TableCell colSpan={4} align="center" sx={{ py: 6, color: 'text.secondary' }}>No flashcards found. Generate some first!</TableCell>
+                              </TableRow>
+                          ) : (
+                              flashcards.map(c => (
+                                  <TableRow key={c.id}>
+                                      <TableCell sx={{ maxWidth: 300 }}>{c.front}</TableCell>
+                                      <TableCell sx={{ maxWidth: 300 }}>{c.back}</TableCell>
+                                      <TableCell>{c.ease_factor || 2.5}</TableCell>
+                                      <TableCell>{c.interval || 0}</TableCell>
+                                  </TableRow>
+                              ))
+                          )}
+                      </TableBody>
+                  </Table>
+              </TableContainer>
+          </Box>
+      )}
     </Box>
   );
 }

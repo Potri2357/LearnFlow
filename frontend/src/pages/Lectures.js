@@ -1,62 +1,52 @@
 // src/pages/Lectures.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
-  Box, Typography, Card, CardContent, IconButton, 
-  Button, Chip, CircularProgress, Alert, 
-  Dialog, DialogActions, DialogContent, DialogTitle,
-  Grid, Paper, TextField, Stack, Tab, Tabs, InputAdornment,
-  Divider, Tooltip, Fade, LinearProgress
+    Box, Typography, IconButton, 
+    Button, Chip, CircularProgress, Alert, 
+    Dialog, DialogActions, DialogContent, DialogTitle,
+    Grid, Paper, TextField, Stack, Tab, Tabs, InputAdornment,
+    Divider, Tooltip, Fade, Accordion, AccordionSummary, AccordionDetails
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import { 
-  Delete as DeleteIcon, 
-  Search as SearchIcon,
-  CloudUpload as CloudUploadIcon,
+import {
+  Add as AddIcon,
+  Article as ArticleIcon,
   AutoAwesome as AutoAwesomeIcon,
-  Description as DescriptionIcon,
   CalendarToday as CalendarIcon,
   CheckCircle as CheckCircleIcon,
+  CloudUpload as CloudUploadIcon,
   Close as CloseIcon,
-  Quiz as QuizIcon,
-  PictureAsPdf as PdfIcon,
+  Delete as DeleteIcon,
+  Description as DescriptionIcon,
+  Download as DownloadIcon,
+  ExpandMore as ExpandMoreIcon,
   Image as ImageIcon,
-  VideoFile as VideoIcon,
-  AudioFile as AudioIcon,
-  InsertDriveFile as FileIcon,
-  Article as ArticleIcon,
   LibraryBooks as LibraryIcon,
-  Visibility as PreviewIcon,
-  ZoomIn as ZoomInIcon,
-  ZoomOut as ZoomOutIcon,
   NavigateBefore as PrevIcon,
   NavigateNext as NextIcon,
-  Download as DownloadIcon,
-  OpenInNew as OpenInNewIcon,
   Notes as NotesIcon,
-  Calculate as CalculateIcon,
-  Lightbulb as LightbulbIcon,
-  Refresh as RefreshIcon,
-  FiberManualRecord as BulletIcon,
-  StickyNote2 as StickyNote2Icon,
-  Add as AddIcon,
-  Edit as EditIcon,
-  Save as SaveIcon,
-  ColorLens as ColorLensIcon,
+  OpenInNew as OpenInNewIcon,
+  PictureAsPdf as PdfIcon,
+  Preview as PreviewIcon,
+  Quiz as QuizIcon,
+  Search as SearchIcon,
+  VideoFile as VideoIcon,
+  AudioFile as AudioIcon,
 } from '@mui/icons-material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useAuth } from '../context/AuthContext';
-import API from '../api/api';
-import { useNavigate } from 'react-router-dom';
-import { useDropzone } from 'react-dropzone';
+import NotesSidebar from '../components/NotesSidebar';
+import { captureSelectedText } from '../components/PDFTextSelector';
+import { subjectToColor } from '../utils/subjectColors';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
+import { useDropzone } from 'react-dropzone';
+import { useAuth } from '../context/AuthContext';
+import API from '../api/api';
+import { useNavigate } from 'react-router-dom';
 
-// Set worker source
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-// --- Helper: Get File Type ---
 const getFileType = (filename) => {
     if (!filename) return 'unknown';
     const ext = filename.split('.').pop().toLowerCase();
@@ -72,79 +62,42 @@ const getFileUrl = (file) => {
     return file.startsWith('http') ? file : `http://127.0.0.1:8000${file.startsWith('/') ? '' : '/'}${file}`;
 };
 
-// --- Markdown Renderer ---
-const MarkdownContent = ({ children }) => (
-    <Box
-        sx={{
-            '& h1, & h2, & h3, & h4': {
-                fontWeight: 700,
-                mt: 2,
-                mb: 1,
-                color: 'text.primary',
-            },
-            '& h2': { fontSize: '1.1rem', borderBottom: '1px solid', borderColor: 'divider', pb: 0.5 },
-            '& h3': { fontSize: '1rem' },
-            '& p': { lineHeight: 1.8, mb: 1, color: 'text.secondary' },
-            '& ul, & ol': { pl: 2.5, mb: 1 },
-            '& li': { mb: 0.5, color: 'text.secondary', lineHeight: 1.6 },
-            '& strong': { fontWeight: 700, color: 'text.primary' },
-            '& em': { fontStyle: 'italic' },
-            '& code': {
-                fontFamily: 'monospace',
-                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-                px: 0.75,
-                py: 0.25,
-                borderRadius: '4px',
-                fontSize: '0.85em',
-            },
-            '& pre': {
-                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.04)',
-                p: 2,
-                borderRadius: 2,
-                overflowX: 'auto',
-                mb: 2,
-            },
-            '& blockquote': {
-                borderLeft: '3px solid',
-                borderColor: 'primary.main',
-                pl: 2,
-                my: 1.5,
-                color: 'text.secondary',
-            },
-            '& table': { borderCollapse: 'collapse', width: '100%', mb: 2 },
-            '& th, & td': { border: '1px solid', borderColor: 'divider', p: 1, textAlign: 'left' },
-            '& th': { bgcolor: 'action.hover', fontWeight: 700 },
-        }}
-    >
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{children || ''}</ReactMarkdown>
-    </Box>
-);
-
-// --- Full-Width PDF/File Viewer Component ---
 const FileViewer = ({ lecture }) => {
-    const [numPages, setNumPages] = useState(null);
+    const [numPages, setNumPages] = useState(0);
     const [pageNumber, setPageNumber] = useState(1);
     const [scale, setScale] = useState(1.0);
-    const [containerWidth, setContainerWidth] = useState(null);
-    const containerRef = React.useRef(null);
+    const [selectedText, setSelectedText] = useState('');
+    const viewerRef = useRef(null);
 
     const fileType = getFileType(lecture?.file);
     const fileUrl = getFileUrl(lecture?.file);
 
     useEffect(() => {
-        const updateWidth = () => {
-            if (containerRef.current) setContainerWidth(containerRef.current.offsetWidth);
-        };
-        updateWidth();
-        const observer = new ResizeObserver(updateWidth);
-        if (containerRef.current) observer.observe(containerRef.current);
-        return () => observer.disconnect();
-    }, []);
-
-    useEffect(() => {
+        setNumPages(0);
         setPageNumber(1);
         setScale(1.0);
-    }, [lecture?.file]);
+        setSelectedText('');
+    }, [lecture?.id, lecture?.file]);
+
+    const handleMouseUp = () => {
+        const text = captureSelectedText();
+        setSelectedText(text);
+        if (text) {
+            window.lastSelectedPdfText = text;
+        }
+    };
+
+    const dispatchSelection = () => {
+        const text = selectedText || captureSelectedText() || window.lastSelectedPdfText || '';
+        if (!text.trim()) return;
+        window.lastSelectedPdfText = text;
+        window.dispatchEvent(new CustomEvent('lf:pdf-selection', {
+            detail: { text, lectureId: lecture?.id, pageNumber },
+        }));
+        setSelectedText('');
+        const selection = window.getSelection?.();
+        if (selection && selection.removeAllRanges) selection.removeAllRanges();
+    };
 
     if (!lecture) {
         return (
@@ -168,674 +121,150 @@ const FileViewer = ({ lecture }) => {
         );
     }
 
-    const renderContent = () => {
-        switch (fileType) {
-            case 'pdf':
-                return (
-                    <Document
-                        file={fileUrl}
-                        onLoadSuccess={({ numPages }) => { setNumPages(numPages); setPageNumber(1); }}
-                        loading={<Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress sx={{ color: 'white' }} /></Box>}
-                        error={
-                            <Box sx={{ textAlign: 'center', p: 3, color: 'white' }}>
-                                <PdfIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
-                                <Typography>Failed to load PDF</Typography>
-                                <Button href={fileUrl} target="_blank" variant="outlined" sx={{ mt: 2, color: 'white', borderColor: 'white' }}>
-                                    Open in Browser
-                                </Button>
-                            </Box>
-                        }
-                    >
-                        <Page
-                            pageNumber={pageNumber}
-                            scale={scale}
-                            renderTextLayer={true}
-                            renderAnnotationLayer={false}
-                            width={containerWidth ? (containerWidth - 48) * 0.9 : 800}
-                        />
-                    </Document>
-                );
-            case 'image':
-                return (
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: 400 }}>
-                        <img
-                            src={fileUrl}
-                            alt="Preview"
-                            style={{
-                                transform: `scale(${scale})`,
-                                transformOrigin: 'top center',
-                                transition: 'transform 0.2s',
-                                maxWidth: '90%',
-                                objectFit: 'contain',
-                                borderRadius: 8,
-                            }}
-                        />
-                    </Box>
-                );
-            case 'video':
-                return (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-                        <video controls style={{ maxWidth: '90%', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
-                            <source src={fileUrl} />
-                        </video>
-                    </Box>
-                );
-            case 'audio':
-                return (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, py: 8 }}>
-                        <AudioIcon sx={{ fontSize: 120, color: 'primary.main', opacity: 0.8 }} />
-                        <audio controls style={{ width: '80%' }}>
-                            <source src={fileUrl} />
-                        </audio>
-                    </Box>
-                );
-            default:
-                return (
-                    <Box sx={{ textAlign: 'center', py: 10 }}>
-                        <FileIcon sx={{ fontSize: 80, mb: 2, color: 'text.disabled' }} />
-                        <Typography variant="h6" color="text.secondary" gutterBottom>Preview not available</Typography>
-                        <Button variant="contained" href={fileUrl} download target="_blank" startIcon={<DownloadIcon />} sx={{ mt: 2 }}>
-                            Download File
-                        </Button>
-                    </Box>
-                );
-        }
-    };
-
-    const showZoom = ['pdf', 'image'].includes(fileType);
-    const showPageNav = fileType === 'pdf' && numPages;
+    const showPdfSelectionButton = fileType === 'pdf' && Boolean(selectedText);
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            {/* Viewer Toolbar */}
+        <Box ref={viewerRef} sx={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }} onMouseUp={handleMouseUp}>
             <Box sx={{
-                px: 3, py: 1.5,
+                px: 2.5, py: 1.5,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 borderBottom: '1px solid', borderColor: 'divider',
                 bgcolor: 'background.paper',
-                flexShrink: 0
+                flexShrink: 0,
+                gap: 2,
+                position: 'sticky',
+                top: 0,
+                zIndex: 1,
             }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
                     {fileType === 'pdf' && <PdfIcon sx={{ color: '#ef4444' }} />}
                     {fileType === 'image' && <ImageIcon sx={{ color: 'primary.main' }} />}
                     {fileType === 'video' && <VideoIcon sx={{ color: 'secondary.main' }} />}
                     {fileType === 'audio' && <AudioIcon sx={{ color: 'warning.main' }} />}
-                    <Box>
-                        <Typography variant="subtitle1" fontWeight={800} sx={{ lineHeight: 1.2 }}>
+                    <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="subtitle1" fontWeight={800} noWrap>
                             {lecture.title}
                         </Typography>
-                        {showPageNav && (
-                            <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                                Page {pageNumber} of {numPages}
-                            </Typography>
-                        )}
+                        <Typography variant="caption" color="text.secondary">
+                            {fileType === 'pdf' ? `Page ${pageNumber}${numPages ? ` / ${numPages}` : ''}` : 'Preview'}
+                        </Typography>
                     </Box>
                 </Box>
-
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    {showPageNav && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    {fileType === 'pdf' && (
                         <>
-                            <Tooltip title="Previous page">
-                                <span>
-                                    <IconButton size="small" disabled={pageNumber <= 1} onClick={() => setPageNumber(p => p - 1)}>
-                                        <PrevIcon />
-                                    </IconButton>
-                                </span>
-                            </Tooltip>
-                            <Typography variant="caption" fontWeight={700} sx={{ px: 1, minWidth: 60, textAlign: 'center' }}>
-                                {pageNumber} / {numPages}
-                            </Typography>
-                            <Tooltip title="Next page">
-                                <span>
-                                    <IconButton size="small" disabled={pageNumber >= numPages} onClick={() => setPageNumber(p => p + 1)}>
-                                        <NextIcon />
-                                    </IconButton>
-                                </span>
-                            </Tooltip>
-                            <Divider orientation="vertical" flexItem sx={{ mx: 1, my: 0.5 }} />
+                            <Tooltip title="Previous page"><span><IconButton size="small" disabled={pageNumber <= 1} onClick={() => setPageNumber((p) => Math.max(1, p - 1))}><PrevIcon fontSize="small" /></IconButton></span></Tooltip>
+                            <Tooltip title="Next page"><span><IconButton size="small" disabled={numPages > 0 && pageNumber >= numPages} onClick={() => setPageNumber((p) => p + 1)}><NextIcon fontSize="small" /></IconButton></span></Tooltip>
+                            <Divider orientation="vertical" flexItem />
+                            <Tooltip title="Zoom out"><IconButton size="small" onClick={() => setScale((s) => Math.max(0.4, +(s - 0.1).toFixed(1)))}><DownloadIcon sx={{ transform: 'rotate(180deg)' }} fontSize="small" /></IconButton></Tooltip>
+                            <Typography variant="caption" fontWeight={700} sx={{ minWidth: 48, textAlign: 'center' }}>{Math.round(scale * 100)}%</Typography>
+                            <Tooltip title="Zoom in"><IconButton size="small" onClick={() => setScale((s) => +(s + 0.1).toFixed(1))}><DownloadIcon fontSize="small" /></IconButton></Tooltip>
                         </>
                     )}
-                    {showZoom && (
-                        <>
-                            <Tooltip title="Zoom out">
-                                <IconButton size="small" onClick={() => setScale(s => Math.max(0.4, +(s - 0.1).toFixed(1)))}>
-                                    <ZoomOutIcon fontSize="small" />
-                                </IconButton>
-                            </Tooltip>
-                            <Typography variant="caption" fontWeight={700} sx={{ minWidth: 48, textAlign: 'center' }}>
-                                {Math.round(scale * 100)}%
-                            </Typography>
-                            <Tooltip title="Zoom in">
-                                <IconButton size="small" onClick={() => setScale(s => Math.min(3.0, +(s + 0.1).toFixed(1)))}>
-                                    <ZoomInIcon fontSize="small" />
-                                </IconButton>
-                            </Tooltip>
-                            <Divider orientation="vertical" flexItem sx={{ mx: 1, my: 0.5 }} />
-                        </>
-                    )}
-                    <Tooltip title="Open in new tab">
-                        <IconButton size="small" component="a" href={fileUrl} target="_blank">
-                            <OpenInNewIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
+                    <Tooltip title="Open in new tab"><IconButton size="small" component="a" href={fileUrl} target="_blank" rel="noreferrer"><OpenInNewIcon fontSize="small" /></IconButton></Tooltip>
                 </Box>
             </Box>
 
-            {/* Content Area */}
-            <Box
-                ref={containerRef}
-                sx={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    p: 3,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    bgcolor: fileType === 'pdf' ? '#1e1e2e' : 'background.default',
-                    '& .react-pdf__Page': {
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-                        borderRadius: '4px',
-                        overflow: 'hidden',
-                        margin: '0 auto 16px',
-                    }
-                }}
-            >
-                {renderContent()}
+            <Box sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', bgcolor: fileType === 'pdf' ? '#1e1e2e' : 'background.default' }}>
+                {fileType === 'pdf' ? (
+                    <Document
+                        file={fileUrl}
+                        loading={<Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress sx={{ color: 'white' }} /></Box>}
+                        onLoadSuccess={({ numPages: loadedPages }) => setNumPages(loadedPages)}
+                        error={<Alert severity="error">Failed to load PDF</Alert>}
+                    >
+                        <Page
+                            pageNumber={Math.min(pageNumber, numPages || pageNumber)}
+                            scale={scale}
+                            renderTextLayer
+                            renderAnnotationLayer={false}
+                            width={undefined}
+                        />
+                    </Document>
+                ) : fileType === 'image' ? (
+                    <img src={fileUrl} alt={lecture.title} style={{ maxWidth: '100%', borderRadius: 12, objectFit: 'contain' }} />
+                ) : fileType === 'video' ? (
+                    <video controls style={{ width: '100%', maxWidth: 960, borderRadius: 12 }}><source src={fileUrl} /></video>
+                ) : fileType === 'audio' ? (
+                    <audio controls style={{ width: '100%' }}><source src={fileUrl} /></audio>
+                ) : (
+                    <Alert severity="info">Preview not available</Alert>
+                )}
             </Box>
+
+            {showPdfSelectionButton && (
+                <Box sx={{ position: 'absolute', right: 16, bottom: 16, zIndex: 5 }}>
+                    <Button variant="contained" color="secondary" onClick={dispatchSelection} sx={{ boxShadow: '0 12px 28px rgba(124,58,237,0.28)' }}>
+                        Add selection to notes
+                    </Button>
+                </Box>
+            )}
         </Box>
     );
 };
 
-// --- Notes/Formula/KeyPoints Panel ---
-const StudyAidsPanel = ({ lecture: initialLecture, lectureId }) => {
-    const [lecture, setLecture] = useState(initialLecture);
-    const [generating, setGenerating] = useState(false);
-    const [error, setError] = useState('');
-    const [activeTab, setActiveTab] = useState(0);
-
-    // Keep in sync with parent
-    useEffect(() => { setLecture(initialLecture); }, [initialLecture]);
-
-    const hasContent = lecture?.study_notes || (lecture?.formulas?.length > 0) || (lecture?.key_points?.length > 0);
-
-    const generateAids = async () => {
-        setGenerating(true);
-        setError('');
-        try {
-            const res = await API.post(`lectures/${lectureId}/generate-study-aids/`);
-            setLecture(prev => ({
-                ...prev,
-                study_notes: res.data.study_notes,
-                formulas: res.data.formulas,
-                key_points: res.data.key_points,
-            }));
-        } catch (err) {
-            const errData = err?.response?.data;
-            setError(errData?.error || 'Failed to generate study aids. Please try again.');
-        } finally {
-            setGenerating(false);
-        }
-    };
+const StudyAidsPanel = ({ lecture }) => {
+    const [tabValue, setTabValue] = useState(0);
+    const formulas = lecture?.formulas || [];
+    const keyPoints = lecture?.key_points || [];
 
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {/* Header */}
-            <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-                <Box>
-                    <Typography variant="subtitle1" fontWeight={800}>AI Study Aids</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                        {hasContent ? 'Study notes, formulas, and key points for this lecture' : 'Generate AI-powered study aids from this lecture PDF'}
-                    </Typography>
-                </Box>
-                <Button
-                    variant={hasContent ? 'outlined' : 'contained'}
-                    size="small"
-                    startIcon={generating ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />}
-                    onClick={generateAids}
-                    disabled={generating}
-                    sx={{ borderRadius: 2, fontWeight: 700 }}
-                >
-                    {generating ? 'Generating...' : hasContent ? 'Regenerate' : 'Generate Now'}
-                </Button>
+            <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
+                <Typography variant="subtitle1" fontWeight={800}>AI Study Aids</Typography>
+                <Typography variant="caption" color="text.secondary">
+                    Study notes, formulas, and key points for this lecture
+                </Typography>
             </Box>
 
-            {generating && <LinearProgress color="primary" />}
+            <Box sx={{ px: 3, borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
+                <Tabs value={tabValue} onChange={(_, value) => setTabValue(value)} variant="scrollable" scrollButtons="auto">
+                    <Tab label="Notes" />
+                    <Tab label={`Formulas (${formulas.length})`} />
+                    <Tab label={`Key Points (${keyPoints.length})`} />
+                </Tabs>
+            </Box>
 
-            {error && (
-                <Box sx={{ px: 3, pt: 2 }}>
-                    <Alert severity="error" onClose={() => setError('')}>{error}</Alert>
-                </Box>
-            )}
+            <Box sx={{ p: 3, flex: 1, overflowY: 'auto' }}>
+                {tabValue === 0 && (
+                    lecture?.study_notes ? (
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{lecture.study_notes}</ReactMarkdown>
+                    ) : (
+                        <Alert severity="info" variant="outlined">No study notes generated yet.</Alert>
+                    )
+                )}
 
-            {!hasContent && !generating && !error && (
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, py: 6, px: 3, textAlign: 'center' }}>
-                    <Box sx={{
-                        width: 72, height: 72, borderRadius: '50%', mb: 2,
-                        background: 'linear-gradient(135deg, rgba(3,140,127,0.1) 0%, rgba(2,115,115,0.2) 100%)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                        <AutoAwesomeIcon sx={{ fontSize: 36, color: 'primary.main' }} />
-                    </Box>
-                    <Typography variant="h6" fontWeight={700} gutterBottom>No Study Aids Yet</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 320, mb: 3 }}>
-                        Click "Generate Now" to extract study notes, formulas, and key points from this lecture's PDF using AI.
-                    </Typography>
-                    <Button variant="contained" onClick={generateAids} startIcon={<AutoAwesomeIcon />} sx={{ borderRadius: 2 }}>
-                        Generate Study Aids
-                    </Button>
-                </Box>
-            )}
+                {tabValue === 1 && (
+                    <Stack spacing={1.5}>
+                        {formulas.length > 0 ? formulas.map((formula, index) => (
+                            <Paper key={index} elevation={0} sx={{ p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                                <Typography variant="subtitle2" fontWeight={800} gutterBottom>
+                                    {formula.name || `Formula ${index + 1}`}
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: formula.description ? 1 : 0 }}>
+                                    {formula.formula || '—'}
+                                </Typography>
+                                {formula.description && <Typography variant="body2" color="text.secondary">{formula.description}</Typography>}
+                            </Paper>
+                        )) : <Alert severity="info" variant="outlined">No formulas extracted yet.</Alert>}
+                    </Stack>
+                )}
 
-            {hasContent && (
-                <>
-                    {/* Sub-tabs */}
-                    <Box sx={{ px: 3, borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
-                        <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ '& .MuiTab-root': { fontWeight: 700, minHeight: 48, fontSize: '0.85rem' } }}>
-                            <Tab icon={<NotesIcon fontSize="small" />} iconPosition="start" label="Notes" />
-                            <Tab icon={<CalculateIcon fontSize="small" />} iconPosition="start" label={`Formulas${lecture.formulas?.length ? ` (${lecture.formulas.length})` : ''}`} />
-                            <Tab icon={<LightbulbIcon fontSize="small" />} iconPosition="start" label={`Key Points${lecture.key_points?.length ? ` (${lecture.key_points.length})` : ''}`} />
-                        </Tabs>
-                    </Box>
-
-                    <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
-                        {/* Notes Tab */}
-                        {activeTab === 0 && (
-                            <Box>
-                                {lecture.study_notes ? (
-                                    <MarkdownContent>{lecture.study_notes}</MarkdownContent>
-                                ) : (
-                                    <Alert severity="info" variant="outlined">No study notes generated yet.</Alert>
-                                )}
-                            </Box>
-                        )}
-
-                        {/* Formulas Tab */}
-                        {activeTab === 1 && (
-                            <Stack spacing={2}>
-                                {lecture.formulas && lecture.formulas.length > 0 ? (
-                                    lecture.formulas.map((f, idx) => (
-                                        <Paper
-                                            key={idx}
-                                            elevation={0}
-                                            sx={{
-                                                borderRadius: '12px',
-                                                border: '1px solid',
-                                                borderColor: 'divider',
-                                                overflow: 'hidden',
-                                            }}
-                                        >
-                                            <Box sx={{
-                                                px: 2.5, py: 1.5,
-                                                background: (theme) => theme.palette.mode === 'dark'
-                                                    ? 'rgba(3,140,127,0.12)'
-                                                    : 'linear-gradient(135deg, rgba(3,140,127,0.06) 0%, rgba(2,115,115,0.06) 100%)',
-                                                borderBottom: '1px solid', borderColor: 'divider',
-                                                display: 'flex', alignItems: 'center', gap: 1,
-                                            }}>
-                                                <CalculateIcon sx={{ fontSize: 18, color: 'primary.main' }} />
-                                                <Typography variant="subtitle2" fontWeight={800} color="primary.main">
-                                                    {f.name || `Formula ${idx + 1}`}
-                                                </Typography>
-                                            </Box>
-                                            <Box sx={{ px: 2.5, py: 2 }}>
-                                                <Paper
-                                                    elevation={0}
-                                                    sx={{
-                                                        px: 2, py: 1.5, mb: 1.5,
-                                                        fontFamily: 'monospace',
-                                                        fontSize: '1rem',
-                                                        fontWeight: 700,
-                                                        letterSpacing: '0.025em',
-                                                        bgcolor: (theme) => theme.palette.mode === 'dark'
-                                                            ? 'rgba(255,255,255,0.06)'
-                                                            : 'rgba(0,0,0,0.03)',
-                                                        borderRadius: '8px',
-                                                        borderLeft: '3px solid',
-                                                        borderColor: 'primary.main',
-                                                        color: 'text.primary',
-                                                    }}
-                                                >
-                                                    {f.formula || '—'}
-                                                </Paper>
-                                                {f.description && (
-                                                    <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-                                                        {f.description}
-                                                    </Typography>
-                                                )}
-                                            </Box>
-                                        </Paper>
-                                    ))
-                                ) : (
-                                    <Alert severity="info" variant="outlined">No formulas extracted yet.</Alert>
-                                )}
-                            </Stack>
-                        )}
-
-                        {/* Key Points Tab */}
-                        {activeTab === 2 && (
-                            <Stack spacing={1.5}>
-                                {lecture.key_points && lecture.key_points.length > 0 ? (
-                                    lecture.key_points.map((pt, idx) => (
-                                        <Paper
-                                            key={idx}
-                                            elevation={0}
-                                            sx={{
-                                                p: 2,
-                                                borderRadius: '12px',
-                                                border: '1px solid',
-                                                borderColor: 'divider',
-                                                display: 'flex',
-                                                alignItems: 'flex-start',
-                                                gap: 1.5,
-                                                transition: 'all 0.15s',
-                                                '&:hover': {
-                                                    borderColor: 'primary.main',
-                                                    bgcolor: (theme) => theme.palette.mode === 'dark'
-                                                        ? 'rgba(3,140,127,0.05)'
-                                                        : 'rgba(3,140,127,0.03)',
-                                                    transform: 'translateX(4px)',
-                                                },
-                                            }}
-                                        >
-                                            <Box sx={{
-                                                width: 28, height: 28, minWidth: 28,
-                                                borderRadius: '8px',
-                                                background: 'linear-gradient(135deg, #038C7F 0%, #027373 100%)',
-                                                color: 'white',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontWeight: 800, fontSize: '13px', mt: 0.1,
-                                            }}>
-                                                {idx + 1}
-                                            </Box>
-                                            <Typography variant="body2" sx={{ lineHeight: 1.7, color: 'text.primary', flex: 1 }}>
-                                                {pt}
-                                            </Typography>
-                                        </Paper>
-                                    ))
-                                ) : (
-                                    <Alert severity="info" variant="outlined">No key points extracted yet.</Alert>
-                                )}
-                            </Stack>
-                        )}
-                    </Box>
-                </>
-            )}
+                {tabValue === 2 && (
+                    <Stack spacing={1.25}>
+                        {keyPoints.length > 0 ? keyPoints.map((point, index) => (
+                            <Paper key={index} elevation={0} sx={{ p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                                <Typography variant="body2">{point}</Typography>
+                            </Paper>
+                        )) : <Alert severity="info" variant="outlined">No key points extracted yet.</Alert>}
+                    </Stack>
+                )}
+            </Box>
         </Box>
     );
 };
 
-// ─── Class Notes (Sticky Notes) Panel ───────────────────────────────────────
-const NOTE_COLORS = [
-    { hex: '#FFF9C4', label: 'Yellow' },
-    { hex: '#BBDEFB', label: 'Blue' },
-    { hex: '#C8E6C9', label: 'Green' },
-    { hex: '#FFCCBC', label: 'Peach' },
-    { hex: '#E1BEE7', label: 'Purple' },
-    { hex: '#F8BBD9', label: 'Pink' },
-    { hex: '#B2EBF2', label: 'Cyan' },
-    { hex: '#FFE0B2', label: 'Orange' },
-];
-
-const ClassNotesPanel = ({ lectureId }) => {
-    const [notes, setNotes] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [creating, setCreating] = useState(false);
-    const [editingId, setEditingId] = useState(null);
-    // New note form state
-    const [newTitle, setNewTitle] = useState('');
-    const [newContent, setNewContent] = useState('');
-    const [newColor, setNewColor] = useState('#FFF9C4');
-    // Edit state
-    const [editTitle, setEditTitle] = useState('');
-    const [editContent, setEditContent] = useState('');
-    const [editColor, setEditColor] = useState('#FFF9C4');
-    const theme = useTheme();
-
-    const fetchNotes = useCallback(async () => {
-        setLoading(true);
-        try {
-            const res = await API.get(`/sticky-notes/?lecture_id=${lectureId}`);
-            setNotes(res.data || []);
-        } catch (e) { console.error(e); }
-        finally { setLoading(false); }
-    }, [lectureId]);
-
-    useEffect(() => { fetchNotes(); }, [fetchNotes]);
-
-    const handleCreate = async () => {
-        if (!newContent.trim()) return;
-        try {
-            const res = await API.post('/sticky-notes/', {
-                title: newTitle.trim() || 'Class Note',
-                content: newContent,
-                color: newColor,
-                lecture_note_id: lectureId,
-            });
-            setNotes(prev => [res.data, ...prev]);
-            setNewTitle(''); setNewContent(''); setNewColor('#FFF9C4');
-            setCreating(false);
-        } catch (e) { console.error(e); }
-    };
-
-    const handleStartEdit = (note) => {
-        setEditingId(note.id);
-        setEditTitle(note.title);
-        setEditContent(note.content);
-        setEditColor(note.color);
-    };
-
-    const handleSaveEdit = async (noteId) => {
-        try {
-            const res = await API.put(`/sticky-notes/${noteId}/`, {
-                title: editTitle,
-                content: editContent,
-                color: editColor,
-            });
-            setNotes(prev => prev.map(n => n.id === noteId ? { ...n, ...res.data } : n));
-            setEditingId(null);
-        } catch (e) { console.error(e); }
-    };
-
-    const handleDelete = async (noteId) => {
-        try {
-            await API.delete(`/sticky-notes/${noteId}/`);
-            setNotes(prev => prev.filter(n => n.id !== noteId));
-        } catch (e) { console.error(e); }
-    };
-
-    const isDark = theme.palette.mode === 'dark';
-
-    // Color picker row
-    const ColorPicker = ({ value, onChange }) => (
-        <Box display="flex" gap={0.75} flexWrap="wrap" mt={1}>
-            {NOTE_COLORS.map(c => (
-                <Tooltip key={c.hex} title={c.label}>
-                    <Box
-                        onClick={() => onChange(c.hex)}
-                        sx={{
-                            width: 22, height: 22, borderRadius: '50%',
-                            bgcolor: c.hex,
-                            border: value === c.hex ? '3px solid' : '2px solid transparent',
-                            borderColor: value === c.hex ? 'primary.main' : 'transparent',
-                            cursor: 'pointer',
-                            outline: value === c.hex ? '1px solid' : 'none',
-                            outlineColor: 'primary.main',
-                            transition: 'transform 0.15s',
-                            '&:hover': { transform: 'scale(1.2)' },
-                        }}
-                    />
-                </Tooltip>
-            ))}
-        </Box>
-    );
-
-    return (
-        <Box sx={{ p: 3, height: '100%', overflowY: 'auto' }}>
-            {/* Header */}
-            <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
-                <Box display="flex" alignItems="center" gap={1}>
-                    <StickyNote2Icon sx={{ color: '#f59e0b' }} />
-                    <Typography variant="subtitle1" fontWeight={700}>Class Notes</Typography>
-                    {notes.length > 0 && (
-                        <Chip label={`${notes.length} note${notes.length > 1 ? 's' : ''}`} size="small" sx={{ bgcolor: 'rgba(245,158,11,0.12)', color: '#f59e0b', fontWeight: 700 }} />
-                    )}
-                </Box>
-                <Button
-                    size="small" variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => setCreating(true)}
-                    sx={{ borderRadius: 2, fontWeight: 700, bgcolor: '#f59e0b', '&:hover': { bgcolor: '#d97706' } }}
-                >
-                    New Note
-                </Button>
-            </Box>
-
-            {/* New Note Form */}
-            {creating && (
-                <Paper elevation={0} sx={{
-                    mb: 3, p: 2.5, borderRadius: 2,
-                    border: '2px solid',
-                    borderColor: 'primary.main',
-                    bgcolor: isDark ? 'rgba(30,40,50,0.9)' : '#fff',
-                }}>
-                    <Typography variant="caption" fontWeight={800} color="primary.main" sx={{ letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', mb: 1.5 }}>
-                        New Class Note
-                    </Typography>
-                    <TextField
-                        fullWidth size="small" placeholder="Note title (e.g. Chapter 3 Definitions)"
-                        value={newTitle} onChange={e => setNewTitle(e.target.value)}
-                        sx={{ mb: 1.5, '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
-                    />
-                    <TextField
-                        fullWidth multiline rows={5}
-                        placeholder="Paste definitions, hint points, formulas...&#10;&#10;Tip: You can use markdown! **bold**, *italic*, `code`, - bullet lists"
-                        value={newContent} onChange={e => setNewContent(e.target.value)}
-                        sx={{ mb: 1.5, '& .MuiOutlinedInput-root': { borderRadius: 1.5, fontFamily: 'monospace', fontSize: '0.9rem' } }}
-                    />
-                    <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-                        <Box display="flex" alignItems="center" gap={1}>
-                            <ColorLensIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                            <Typography variant="caption" color="text.secondary" fontWeight={700}>Note Color:</Typography>
-                            <ColorPicker value={newColor} onChange={setNewColor} />
-                        </Box>
-                        <Box display="flex" gap={1}>
-                            <Button size="small" onClick={() => { setCreating(false); setNewContent(''); setNewTitle(''); }} color="inherit" sx={{ borderRadius: 2 }}>Cancel</Button>
-                            <Button size="small" variant="contained" startIcon={<SaveIcon />} onClick={handleCreate} disabled={!newContent.trim()}
-                                sx={{ borderRadius: 2, fontWeight: 700 }}>Save Note</Button>
-                        </Box>
-                    </Box>
-                </Paper>
-            )}
-
-            {/* Loading */}
-            {loading && <Box display="flex" justifyContent="center" py={6}><CircularProgress /></Box>}
-
-            {/* Empty state */}
-            {!loading && notes.length === 0 && !creating && (
-                <Box sx={{ textAlign: 'center', py: 6 }}>
-                    <StickyNote2Icon sx={{ fontSize: 64, color: '#f59e0b', opacity: 0.35, mb: 2 }} />
-                    <Typography variant="h6" fontWeight={800} gutterBottom>No Class Notes Yet</Typography>
-                    <Typography variant="body2" color="text.secondary" mb={2}>
-                        Create personal notes, paste important definitions, hint points, and key formulas from this lecture.
-                    </Typography>
-                    <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setCreating(true)}
-                        sx={{ borderRadius: 2, fontWeight: 700, borderColor: '#f59e0b', color: '#f59e0b' }}>
-                        Create First Note
-                    </Button>
-                </Box>
-            )}
-
-            {/* Notes Grid */}
-            {!loading && notes.length > 0 && (
-                <Grid container spacing={2}>
-                    {notes.map(note => (
-                        <Grid item xs={12} sm={6} key={note.id}>
-                            {editingId === note.id ? (
-                                /* Edit Mode */
-                                <Paper elevation={0} sx={{
-                                    p: 2, borderRadius: 2, border: '2px solid',
-                                    borderColor: 'primary.main',
-                                    bgcolor: isDark ? 'rgba(30,40,55,0.95)' : '#fff',
-                                }}>
-                                    <TextField
-                                        fullWidth size="small" value={editTitle}
-                                        onChange={e => setEditTitle(e.target.value)}
-                                        placeholder="Note title"
-                                        sx={{ mb: 1, '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
-                                    />
-                                    <TextField
-                                        fullWidth multiline rows={5} value={editContent}
-                                        onChange={e => setEditContent(e.target.value)}
-                                        sx={{ mb: 1, '& .MuiOutlinedInput-root': { borderRadius: 1.5, fontFamily: 'monospace', fontSize: '0.88rem' } }}
-                                    />
-                                    <ColorPicker value={editColor} onChange={setEditColor} />
-                                    <Box display="flex" justifyContent="flex-end" gap={1} mt={1.5}>
-                                        <Button size="small" onClick={() => setEditingId(null)} color="inherit">Cancel</Button>
-                                        <Button size="small" variant="contained" startIcon={<SaveIcon />}
-                                            onClick={() => handleSaveEdit(note.id)} sx={{ borderRadius: 2, fontWeight: 700 }}>Save</Button>
-                                    </Box>
-                                </Paper>
-                            ) : (
-                                /* View Mode */
-                                <Paper elevation={0} sx={{
-                                    borderRadius: 2,
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    overflow: 'hidden',
-                                    height: '100%',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    transition: 'box-shadow 0.2s',
-                                    '&:hover': { boxShadow: '0 4px 16px rgba(0,0,0,0.12)' },
-                                }}>
-                                    {/* Colored header strip */}
-                                    <Box sx={{ bgcolor: note.color, px: 2, py: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <Typography variant="subtitle2" fontWeight={800} sx={{ color: 'rgba(0,0,0,0.75)', flex: 1, mr: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {note.title}
-                                        </Typography>
-                                        <Box display="flex" gap={0.5}>
-                                            <Tooltip title="Edit">
-                                                <IconButton size="small" onClick={() => handleStartEdit(note)} sx={{ p: 0.5, color: 'rgba(0,0,0,0.5)', '&:hover': { color: 'rgba(0,0,0,0.8)' } }}>
-                                                    <EditIcon sx={{ fontSize: 16 }} />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="Delete">
-                                                <IconButton size="small" onClick={() => handleDelete(note.id)} sx={{ p: 0.5, color: 'rgba(0,0,0,0.5)', '&:hover': { color: '#ef4444' } }}>
-                                                    <DeleteIcon sx={{ fontSize: 16 }} />
-                                                </IconButton>
-                                            </Tooltip>
-                                        </Box>
-                                    </Box>
-                                    {/* Content */}
-                                    <Box sx={{ p: 2, flex: 1, overflowY: 'auto', maxHeight: 260 }}>
-                                        <Box sx={{
-                                            fontSize: '0.875rem',
-                                            lineHeight: 1.7,
-                                            color: 'text.secondary',
-                                            '& p': { m: 0, mb: 0.5 },
-                                            '& strong': { fontWeight: 700, color: 'text.primary' },
-                                            '& ul, & ol': { pl: 2, mb: 0.5, mt: 0.5 },
-                                            '& li': { mb: 0.25 },
-                                            '& code': { fontFamily: 'monospace', bgcolor: 'action.hover', px: 0.5, borderRadius: '3px', fontSize: '0.8rem' },
-                                        }}>
-                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{note.content}</ReactMarkdown>
-                                        </Box>
-                                    </Box>
-                                    <Divider />
-                                    <Box sx={{ px: 2, py: 0.75 }}>
-                                        <Typography variant="caption" color="text.disabled">
-                                            {new Date(note.updated_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-                                        </Typography>
-                                    </Box>
-                                </Paper>
-                            )}
-                        </Grid>
-                    ))}
-                </Grid>
-            )}
-        </Box>
-    );
-};
+// NotesSidebar moved to frontend/src/components/NotesSidebar.js
 
 // --- Details Modal Component ---
 const LectureDetailsModal = ({ open, onClose, lecture, details, detailLecture, loading, onGenerateQuestions, generating }) => {
@@ -862,7 +291,6 @@ const LectureDetailsModal = ({ open, onClose, lecture, details, detailLecture, l
                     <Tab icon={<QuizIcon fontSize="small" />} iconPosition="start" label="Questions" />
                     <Tab icon={<ArticleIcon fontSize="small" />} iconPosition="start" label="Summary" />
                     <Tab icon={<NotesIcon fontSize="small" />} iconPosition="start" label="Study Aids" />
-                    <Tab icon={<StickyNote2Icon fontSize="small" />} iconPosition="start" label="Class Notes" sx={{ color: '#f59e0b', '&.Mui-selected': { color: '#f59e0b' } }} />
                 </Tabs>
             </Box>
 
@@ -899,14 +327,39 @@ const LectureDetailsModal = ({ open, onClose, lecture, details, detailLecture, l
                                     {details?.questions?.map((q, idx) => (
                                         <Paper key={q.id} variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
                                             {/* Question text with markdown */}
-                                            <Box sx={{
-                                                fontWeight: 600, mb: 1.5,
-                                                '& p': { m: 0, fontWeight: 600, fontSize: '0.95rem', lineHeight: 1.6 },
-                                                '& strong': { fontWeight: 800 },
-                                                '& code': { fontFamily: 'monospace', bgcolor: 'action.hover', px: 0.5, borderRadius: '3px', fontSize: '0.88rem' },
-                                            }}>
-                                                <Typography component="span" variant="body1" fontWeight={700} sx={{ mr: 0.5 }}>{idx + 1}.</Typography>
-                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{q.question_text || ''}</ReactMarkdown>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                                                <Box sx={{
+                                                    fontWeight: 600,
+                                                    '& p': { m: 0, fontWeight: 600, fontSize: '0.95rem', lineHeight: 1.6 },
+                                                    '& strong': { fontWeight: 800 },
+                                                    '& code': { fontFamily: 'monospace', bgcolor: 'action.hover', px: 0.5, borderRadius: '3px', fontSize: '0.88rem' },
+                                                }}>
+                                                    <Typography component="span" variant="body1" fontWeight={700} sx={{ mr: 0.5 }}>{idx + 1}.</Typography>
+                                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{q.question_text || ''}</ReactMarkdown>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0, ml: 2 }}>
+                                                    {q.question_type && (
+                                                        <Chip 
+                                                            label={q.question_type.replace('_', ' ').toUpperCase()} 
+                                                            size="small" 
+                                                            sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800, bgcolor: 'rgba(38,70,83,0.1)', color: '#264653' }} 
+                                                        />
+                                                    )}
+                                                    {q.blooms_level && (
+                                                        <Chip 
+                                                            label={q.blooms_level.toUpperCase()} 
+                                                            size="small" 
+                                                            sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800, bgcolor: 'rgba(231,111,81,0.1)', color: '#e76f51' }} 
+                                                        />
+                                                    )}
+                                                    {q.is_high_yield && (
+                                                        <Chip 
+                                                            label="HIGH YIELD" 
+                                                            size="small" 
+                                                            sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800, bgcolor: 'rgba(239,68,68,0.1)', color: '#ef4444' }} 
+                                                        />
+                                                    )}
+                                                </Box>
                                             </Box>
                                             {/* Options */}
                                             <Stack spacing={0.5} sx={{ mb: 1.5 }}>
@@ -980,11 +433,6 @@ const LectureDetailsModal = ({ open, onClose, lecture, details, detailLecture, l
                                 lectureId={lecture.id}
                             />
                         )}
-
-                        {/* Class Notes Tab */}
-                        {tabValue === 3 && lecture && (
-                            <ClassNotesPanel lectureId={lecture.id} />
-                        )}
                     </Box>
                 )}
             </DialogContent>
@@ -1007,6 +455,7 @@ const LectureDetailsModal = ({ open, onClose, lecture, details, detailLecture, l
 // --- Lecture Card Component ---
 const LectureCard = ({ lecture, onDelete, onViewDetails, onSelect, isSelected }) => {
     const fileType = getFileType(lecture.file);
+    const subjectColor = subjectToColor(lecture.subject || 'General');
     const fileTypeIcon = {
         pdf: <PdfIcon sx={{ color: '#ef4444', fontSize: 32 }} />,
         image: <ImageIcon sx={{ color: 'primary.main', fontSize: 32 }} />,
@@ -1022,12 +471,12 @@ const LectureCard = ({ lecture, onDelete, onViewDetails, onSelect, isSelected })
                 p: 2.5,
                 borderRadius: '16px',
                 border: '2px solid',
-                borderColor: isSelected ? 'primary.main' : 'divider',
+                borderColor: isSelected ? subjectColor : 'divider',
                 bgcolor: isSelected ? (theme) => theme.palette.mode === 'dark' ? 'rgba(37,99,235,0.08)' : 'rgba(37,99,235,0.04)' : 'background.paper',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 '&:hover': {
-                    borderColor: 'primary.main',
+                    borderColor: subjectColor,
                     transform: 'translateY(-2px)',
                     boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
                 }
@@ -1038,8 +487,8 @@ const LectureCard = ({ lecture, onDelete, onViewDetails, onSelect, isSelected })
                 <Box sx={{
                     width: 52, height: 52, borderRadius: '12px', flexShrink: 0,
                     background: isSelected
-                        ? 'linear-gradient(135deg, rgba(37,99,235,0.15) 0%, rgba(37,99,235,0.25) 100%)'
-                        : 'linear-gradient(135deg, rgba(37,99,235,0.05) 0%, rgba(37,99,235,0.15) 100%)',
+                        ? `linear-gradient(135deg, ${subjectColor}22 0%, ${subjectColor}38 100%)`
+                        : `linear-gradient(135deg, ${subjectColor}12 0%, ${subjectColor}26 100%)`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                     {fileTypeIcon}
@@ -1051,6 +500,18 @@ const LectureCard = ({ lecture, onDelete, onViewDetails, onSelect, isSelected })
                         {lecture.title}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                        <Chip
+                            label={lecture.subject || 'General'}
+                            size="small"
+                            sx={{
+                                height: 24,
+                                fontSize: '0.72rem',
+                                fontWeight: 800,
+                                bgcolor: `${subjectColor}16`,
+                                color: subjectColor,
+                                borderRadius: '6px',
+                            }}
+                        />
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
                             <CalendarIcon sx={{ fontSize: 13 }} />
                             <Typography variant="caption">
@@ -1285,20 +746,20 @@ const UploadPanel = ({ onUploadSuccess }) => {
 
 // --- Main Page ---
 export default function Lectures() {
-    const { user } = useAuth();
-    const navigate = useNavigate();
+    useAuth();
+    useNavigate();
 
     const [lectures, setLectures] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeTab, setActiveTab] = useState(0); // 0=Library, 1=Preview
     const [selectedLecture, setSelectedLecture] = useState(null);
+    const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
     // Details Modal State
     const [detailsOpen, setDetailsOpen] = useState(false);
     const [detailsLecture, setDetailsLecture] = useState(null);
     const [detailsData, setDetailsData] = useState(null);
-    const [detailLecture, setDetailLecture] = useState(null); // full lecture obj with notes/formulas/key_points
+    const [detailLecture, setDetailLecture] = useState(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [generating, setGenerating] = useState(false);
 
@@ -1306,28 +767,37 @@ export default function Lectures() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [lectureToDelete, setLectureToDelete] = useState(null);
 
-    useEffect(() => {
-        fetchLectures();
-    }, []);
-
-    const fetchLectures = async () => {
+    const fetchLectures = useCallback(async () => {
         try {
             const response = await API.get('lectures/');
             setLectures(response.data);
+            if (!selectedLecture && response.data.length > 0) {
+                setSelectedLecture(response.data[0]);
+            }
         } catch (err) {
             console.error('Failed to fetch lectures:', err);
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedLecture]);
+
+    useEffect(() => {
+        fetchLectures();
+    }, [fetchLectures]);
 
     const filteredLectures = lectures.filter(l =>
         l.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const groupedLectures = filteredLectures.reduce((acc, lecture) => {
+        const subject = lecture.subject || 'General';
+        if (!acc[subject]) acc[subject] = [];
+        acc[subject].push(lecture);
+        return acc;
+    }, {});
+
     const handleSelectLecture = (lecture) => {
         setSelectedLecture(lecture);
-        setActiveTab(1); // Switch to Preview tab
     };
 
     const handleViewDetails = async (lecture) => {
@@ -1338,7 +808,6 @@ export default function Lectures() {
         try {
             const res = await API.get(`lectures/${lecture.id}/`);
             setDetailsData(res.data);
-            // The detail response includes study_notes, formulas, key_points
             setDetailLecture(res.data);
         } catch (err) {
             console.error(err);
@@ -1372,7 +841,6 @@ export default function Lectures() {
             setLectures(prev => prev.filter(l => l.id !== lectureToDelete.id));
             if (selectedLecture?.id === lectureToDelete.id) {
                 setSelectedLecture(null);
-                setActiveTab(0);
             }
             setDeleteDialogOpen(false);
             setLectureToDelete(null);
@@ -1382,99 +850,122 @@ export default function Lectures() {
     };
 
     return (
-        <Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', minHeight: 600 }}>
             {/* Header */}
-            <Box sx={{ mb: 4 }}>
-                <Typography variant="h4" fontWeight={900} gutterBottom>Lecture Library</Typography>
-                <Typography color="text.secondary">Upload and manage your study materials</Typography>
+            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexShrink: 0 }}>
+                <Box>
+                    <Typography variant="h4" fontWeight={900} gutterBottom>Lecture Library</Typography>
+                    <Typography color="text.secondary">Organized by subject for seamless studying.</Typography>
+                </Box>
+                <Button variant="contained" size="large" startIcon={<AddIcon />} onClick={() => setUploadDialogOpen(true)} sx={{ borderRadius: 2, fontWeight: 700, px: 4, py: 1.5, boxShadow: '0 4px 14px rgba(37,99,235,0.30)' }}>
+                    Add Material
+                </Button>
             </Box>
 
-            <Grid container spacing={3} sx={{ alignItems: 'flex-start' }}>
-                {/* Left: Upload Panel */}
-                <Grid item xs={12} lg={3} md={4}>
-                    <UploadPanel onUploadSuccess={fetchLectures} />
-                </Grid>
-
-                {/* Right: Tabbed Panel */}
-                <Grid item xs={12} lg={9} md={8}>
-                    <Paper elevation={0} sx={{ borderRadius: '20px', border: '1px solid', borderColor: 'divider', overflow: 'hidden', minHeight: 600 }}>
-                        {/* Tab Header */}
-                        <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper', px: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Tabs
-                                value={activeTab}
-                                onChange={(_, v) => setActiveTab(v)}
-                                sx={{ '& .MuiTab-root': { fontWeight: 700, minHeight: 56 } }}
-                            >
-                                <Tab
-                                    icon={<LibraryIcon fontSize="small" />}
-                                    iconPosition="start"
-                                    label={`Library (${lectures.length})`}
-                                />
-                                <Tab
-                                    icon={<PreviewIcon fontSize="small" />}
-                                    iconPosition="start"
-                                    label={selectedLecture ? `Preview: ${selectedLecture.title.slice(0, 20)}${selectedLecture.title.length > 20 ? '…' : ''}` : 'Preview'}
-                                    sx={{ color: selectedLecture ? 'primary.main' : 'text.secondary' }}
-                                />
-                            </Tabs>
-
-                            {/* Search - shown on library tab */}
-                            {activeTab === 0 && (
-                                <TextField
-                                    size="small"
-                                    placeholder="Search lectures..."
-                                    value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
-                                    InputProps={{
-                                        startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" sx={{ color: 'text.disabled' }} /></InputAdornment>,
-                                        sx: { borderRadius: '10px', fontSize: '0.875rem' }
-                                    }}
-                                    sx={{ width: 260, my: 1 }}
-                                />
+            <Grid container spacing={3} sx={{ flex: 1, minHeight: 0 }}>
+                {/* Left: Library Accordion */}
+                <Grid item xs={12} lg={3} md={4} sx={{ height: '100%' }}>
+                    <Paper elevation={0} sx={{ borderRadius: '20px', border: '1px solid', borderColor: 'divider', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        <Box sx={{ p: 2.5, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                placeholder="Search lectures..."
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                InputProps={{
+                                    startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" sx={{ color: 'text.disabled' }} /></InputAdornment>,
+                                    sx: { borderRadius: '12px', bgcolor: 'action.hover', '& fieldset': { border: 'none' } }
+                                }}
+                            />
+                        </Box>
+                        
+                        <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+                            {loading ? (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}><CircularProgress /></Box>
+                            ) : Object.keys(groupedLectures).length === 0 ? (
+                                <Box sx={{ textAlign: 'center', py: 8 }}>
+                                    <LibraryIcon sx={{ fontSize: 60, color: 'text.disabled', opacity: 0.3, mb: 2 }} />
+                                    <Typography variant="subtitle1" color="text.secondary" fontWeight={600}>No lectures found</Typography>
+                                </Box>
+                            ) : (
+                                Object.entries(groupedLectures).map(([subject, subLectures], idx) => (
+                                    <Accordion key={subject} defaultExpanded={idx === 0} elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider', borderRadius: '12px !important', overflow: 'hidden', '&:before': { display: 'none' } }}>
+                                        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: 'rgba(37,99,235,0.03)', px: 2, '& .MuiAccordionSummary-content': { my: 1.5 } }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: subjectToColor(subject) }} />
+                                                <Typography variant="subtitle2" fontWeight={800}>{subject}</Typography>
+                                                <Chip label={subLectures.length} size="small" sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700 }} />
+                                            </Box>
+                                        </AccordionSummary>
+                                        <AccordionDetails sx={{ p: 1.5, bgcolor: 'background.paper' }}>
+                                            <Stack spacing={1}>
+                                                {subLectures.map(lecture => (
+                                                    <LectureCard
+                                                        key={lecture.id}
+                                                        lecture={lecture}
+                                                        isSelected={selectedLecture?.id === lecture.id}
+                                                        onSelect={handleSelectLecture}
+                                                        onDelete={handleDeleteClick}
+                                                        onViewDetails={handleViewDetails}
+                                                    />
+                                                ))}
+                                            </Stack>
+                                        </AccordionDetails>
+                                    </Accordion>
+                                ))
                             )}
                         </Box>
-
-                        {/* Tab 0: Library */}
-                        {activeTab === 0 && (
-                            <Box sx={{ p: 3 }}>
-                                {loading ? (
-                                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
-                                        <CircularProgress />
-                                    </Box>
-                                ) : filteredLectures.length === 0 ? (
-                                    <Box sx={{ textAlign: 'center', py: 10 }}>
-                                        <LibraryIcon sx={{ fontSize: 80, color: 'text.disabled', opacity: 0.3, mb: 2 }} />
-                                        <Typography variant="h6" color="text.secondary">
-                                            {searchQuery ? 'No lectures match your search' : 'No lectures yet'}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.disabled">
-                                            {searchQuery ? 'Try a different search term' : 'Upload your first lecture using the panel on the left'}
-                                        </Typography>
-                                    </Box>
-                                ) : (
-                                    <Stack spacing={2}>
-                                        {filteredLectures.map(lecture => (
-                                            <LectureCard
-                                                key={lecture.id}
-                                                lecture={lecture}
-                                                isSelected={selectedLecture?.id === lecture.id}
-                                                onSelect={handleSelectLecture}
-                                                onDelete={handleDeleteClick}
-                                                onViewDetails={handleViewDetails}
-                                            />
-                                        ))}
-                                    </Stack>
-                                )}
-                            </Box>
-                        )}
-
-                        {/* Tab 1: Preview */}
-                        {activeTab === 1 && (
-                            <Box sx={{ height: 'calc(100vh - 260px)', minHeight: 500, display: 'flex', flexDirection: 'column' }}>
-                                <FileViewer lecture={selectedLecture} />
-                            </Box>
-                        )}
                     </Paper>
+                </Grid>
+
+                {/* Right: Persistent File Viewer & Notes Sidebar */}
+                <Grid item xs={12} lg={9} md={8} sx={{ height: '100%' }}>
+                    {selectedLecture ? (
+                        <Box sx={{ display: 'flex', height: '100%', gap: 3 }}>
+                            {/* Viewer Section */}
+                            <Paper elevation={0} sx={{ borderRadius: '20px', border: '1px solid', borderColor: 'divider', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 3 }}>
+                                {/* Sticky Action Bar */}
+                                <Box sx={{ 
+                                    p: 2, px: 3, 
+                                    borderBottom: '1px solid', borderColor: 'divider', 
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+                                }}>
+                                    <Box sx={{ flex: 1, minWidth: 0, mr: 2 }}>
+                                        <Typography variant="subtitle1" fontWeight={800} noWrap>{selectedLecture.title}</Typography>
+                                        <Typography variant="caption" color="text.secondary">Reading mode • {selectedLecture.subject || 'General'}</Typography>
+                                    </Box>
+                                    <Button 
+                                        variant="contained" 
+                                        color="secondary"
+                                        startIcon={<AutoAwesomeIcon />} 
+                                        onClick={() => handleViewDetails(selectedLecture)}
+                                        sx={{ borderRadius: '10px', fontWeight: 700, whiteSpace: 'nowrap' }}
+                                    >
+                                        Generate Study Aids
+                                    </Button>
+                                </Box>
+                                {/* PDF Viewer Area */}
+                                <Box sx={{ flex: 1, overflowY: 'auto', p: 0, display: 'flex', flexDirection: 'column' }}>
+                                    <FileViewer lecture={selectedLecture} />
+                                </Box>
+                            </Paper>
+
+                            {/* Notes Sidebar Section */}
+                            <Paper elevation={0} sx={{ borderRadius: '20px', border: '1px solid', borderColor: 'divider', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1, minWidth: 280 }}>
+                                <NotesSidebar lectureId={selectedLecture.id} />
+                            </Paper>
+                        </Box>
+                    ) : (
+                        <Paper elevation={0} sx={{ borderRadius: '20px', border: '1px solid', borderColor: 'divider', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 2 }}>
+                                <PreviewIcon sx={{ fontSize: 80, color: 'text.disabled', opacity: 0.2 }} />
+                                <Typography variant="h6" color="text.secondary" fontWeight={700}>No Lecture Selected</Typography>
+                                <Typography variant="body2" color="text.disabled">Select a lecture from the library to view it here.</Typography>
+                            </Box>
+                        </Paper>
+                    )}
                 </Grid>
             </Grid>
 
@@ -1489,6 +980,17 @@ export default function Lectures() {
                 onGenerateQuestions={handleGenerateQuestions}
                 generating={generating}
             />
+
+            {/* Upload Modal */}
+            <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: '24px', p: 1 } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, px: 2, pt: 1 }}>
+                    <Typography variant="h6" fontWeight={800}>Add New Material</Typography>
+                    <IconButton onClick={() => setUploadDialogOpen(false)}><CloseIcon /></IconButton>
+                </Box>
+                <DialogContent sx={{ pt: 0 }}>
+                    <UploadPanel onUploadSuccess={() => { fetchLectures(); setUploadDialogOpen(false); }} />
+                </DialogContent>
+            </Dialog>
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
