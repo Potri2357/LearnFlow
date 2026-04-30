@@ -8,7 +8,7 @@
 
 | Feature | Description |
 |---|---|
-| 🤖 **Concept Coach** | Interactive step-by-step cognitive tutor — Socratic guided learning |
+| 🤖 **Concept Coach** | Interactive Socratic tutor with explain/hint/quiz-oriented guidance |
 | 📝 **Rubric Evaluator** | Upload assignments and get detailed rubric-based intelligent feedback |
 | 📖 **Exam Preparation** | Syllabus upload, previous paper analysis, question bank generation |
 | 📅 **AI Strategy Roadmap** | Day-by-day exam study schedule tailored to your syllabus |
@@ -99,6 +99,32 @@ Upload any assignment (PDF, DOCX, TXT) for intelligent rubric-based feedback:
 - Per-topic weakness scores with mastery progression
 - Quiz attempt history with performance metrics
 - User streaks (global and per-topic)
+
+---
+
+## 🛣️ Roadmap Snapshot
+
+### 📚 Lecture Workspace 2.0 (Planned)
+
+- Section-based lecture organization (chapters/topics instead of a flat file list)
+- Graph-style linkage between PDFs, notes, flashcards, and extracted key points
+- Better PDF study flow with section anchors, quick jumps, and selection-to-notes actions
+- Notes as first-class lecture objects with pinning, tagging, and page-linked references
+
+### 🤖 Concept Coach 2.0 (Planned)
+
+- Multi-mode tutoring: Explain, Hint, Quiz-me, Exam mode, and Review mode
+- Stronger context awareness from current lecture, weak topics, and quiz mistakes
+- Better answer structure (definition, intuition, example, recap, key takeaway)
+- One-click learning actions: turn answer into flashcard, save as note, or start follow-up quiz
+- Session continuity improvements (named sessions, resumable context, thread summaries)
+
+### 🔗 Cross-Feature Integrations (Planned)
+
+- Start Concept Coach directly from weak-topic chips and quiz errors
+- Promote lecture notes/highlights into Concept Coach prompts
+- Convert useful coach responses into flashcards and revision notes
+- Feed smart recommendations from quiz performance into next coaching steps
 
 ---
 
@@ -400,13 +426,13 @@ graph TD
 
 ## 🎨 Design System
 
-LearnFlow uses a consistent **glassmorphism dark theme**:
+LearnFlow follows a **premium light-first interface** with structured visual hierarchy:
 
-- **Background**: Deep navy (`#0a0f1e`) with card blur (`backdrop-filter: blur(16px)`)
-- **Accent**: Electric blue (`#2563EB`) with purple gradient (`→ #7c3aed`)
-- **Cards**: Semi-transparent glass with subtle borders (`rgba(42, 59, 77, 0.7)`)
-- **Typography**: System font with bold weights (700–900) for headings
-- **Animations**: Smooth transitions (200ms), fade-in messages, bouncing typing dots
+- **Palette direction**: earth-toned surfaces with high-contrast educational accents
+- **Primary emphasis**: teal/ink actions for learning flow and coral/sand for priority highlights
+- **Cards and surfaces**: rounded layered surfaces for readability across data-dense pages
+- **Typography**: clear heading hierarchy for scan-first study workflows
+- **Motion**: subtle transitions and progressive reveals to support focus, not distract from content
 
 ---
 
