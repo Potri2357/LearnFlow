@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Box, Container, Typography, Button, Grid, Paper, TextField,
   Slider, Switch, Chip, LinearProgress, useTheme,
-  CircularProgress, Alert
+  CircularProgress, Alert, Checkbox
 } from '@mui/material';
 import {
   School as SchoolIcon,
@@ -439,8 +439,11 @@ const StudyPlanDashboard = ({ planData, noteId, onReset }) => {
                                 {/* Today */}
                                 <Box sx={{ mb: 4, position: 'relative' }}>
                                     <Box sx={{ position: 'absolute', left: -19, top: 4, width: 12, height: 12, borderRadius: '50%', bgcolor: 'primary.main', border: `2px solid ${theme.palette.background.paper}`, zIndex: 1 }} />
-                                    <Typography variant="overline" fontWeight={800} color="primary.main" sx={{ letterSpacing: '0.08em', display: 'block', mb: 1 }}>Today</Typography>
-                                    <Paper sx={{ p: 2, borderRadius: '12px', bgcolor: 'rgba(19,127,236,0.05)', border: '1px solid', borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(19,127,236,0.1)' }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Checkbox size="small" />
+                                            <Typography variant="overline" fontWeight={800} color="primary.main" sx={{ letterSpacing: '0.08em', display: 'block', mt: 0.5 }}>Today</Typography>
+                                        </Box>
+                                        <Paper sx={{ p: 2, borderRadius: '12px', bgcolor: 'rgba(19,127,236,0.05)', border: '1px solid', borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(19,127,236,0.1)' }}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                                             <Typography variant="subtitle2" fontWeight={700} color="primary.main">Focus Session</Typography>
                                             <Chip label="Active" size="small" color="primary" sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }} />
@@ -460,9 +463,12 @@ const StudyPlanDashboard = ({ planData, noteId, onReset }) => {
                                 {practiceLines.slice(0, 4).map((item, idx) => (
                                     <Box key={idx} sx={{ mb: 3, position: 'relative' }}>
                                         <Box sx={{ position: 'absolute', left: -19, top: 4, width: 12, height: 12, borderRadius: '50%', bgcolor: 'action.disabled', border: `2px solid ${theme.palette.background.paper}`, zIndex: 1 }} />
-                                        <Typography variant="overline" fontWeight={700} color="text.secondary" sx={{ letterSpacing: '0.08em', display: 'block', mb: 1 }}>
-                                            Day {idx + 2}+
-                                        </Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Checkbox size="small" />
+                                            <Typography variant="overline" fontWeight={700} color="text.secondary" sx={{ letterSpacing: '0.08em', display: 'block', mt: 0.5 }}>
+                                                Day {idx + 2}+
+                                            </Typography>
+                                        </Box>
                                         <Paper sx={{ p: 2, borderRadius: '12px', border: '1px solid', borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.6)', background: theme.palette.mode === 'dark' ? 'rgba(28, 37, 46, 0.65)' : 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(20px)' }}>
                                             <Typography variant="body2" fontWeight={600}>{item}</Typography>
                                         </Paper>
@@ -476,8 +482,8 @@ const StudyPlanDashboard = ({ planData, noteId, onReset }) => {
                                         <Typography variant="overline" fontWeight={700} color="success.main" sx={{ letterSpacing: '0.08em', display: 'block', mb: 1 }}>Final Revision</Typography>
                                         <Paper sx={{ p: 2.5, borderRadius: '10px', border: '1px solid', borderColor: 'rgba(16,185,129,0.2)', bgcolor: 'rgba(16,185,129,0.05)' }}>
                                             {revisionLines.slice(0, 3).map((line, i) => (
-                                                <Typography key={i} variant="body2" color="text.secondary" sx={{ mb: i < revisionLines.length - 1 ? 0.75 : 0, display: 'flex', gap: 1 }}>
-                                                    <CheckCircleIcon sx={{ fontSize: 14, color: 'success.main', mt: 0.3, flexShrink: 0 }} /> {line}
+                                                <Typography key={i} variant="body2" color="text.secondary" sx={{ mb: i < revisionLines.length - 1 ? 0.75 : 0, display: 'flex', gap: 1, alignItems: 'center' }}>
+                                                    <Checkbox size="small" sx={{ p: 0.5 }} /> {line}
                                                 </Typography>
                                             ))}
                                         </Paper>

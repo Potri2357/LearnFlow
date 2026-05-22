@@ -8,31 +8,40 @@ import {
   Typography,
   Box,
   InputAdornment,
-  Tooltip,
-  IconButton,
   CircularProgress,
   Checkbox,
   FormControlLabel,
   FormGroup,
   Chip,
   Stack,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
-import LectureSelect from "../components/LectureSelect";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import MenuBookIcon from "@mui/icons-material/MenuBook";
 import QuizIcon from "@mui/icons-material/Quiz";
-import ClearIcon from "@mui/icons-material/Clear";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import TimerIcon from "@mui/icons-material/Timer";
+import AllInclusiveIcon from "@mui/icons-material/AllInclusive";
 
 export default function QuizEntry() {
   const { api: API } = useAuth();
   const [selectedNoteIds, setSelectedNoteIds] = useState([]);
   const [numQuestions, setNumQuestions] = useState(10);
+  const [timerDuration, setTimerDuration] = useState(30); // seconds; 0 = no timer
   const [loading, setLoading] = useState(false);
   const [lectures, setLectures] = useState([]);
   const [fetchingLectures, setFetchingLectures] = useState(true);
   const navigate = useNavigate();
+
+  const TIMER_OPTIONS = [
+    { label: '15s', value: 15 },
+    { label: '30s', value: 30 },
+    { label: '45s', value: 45 },
+    { label: '60s', value: 60 },
+    { label: '90s', value: 90 },
+    { label: '∞', value: 0 },
+  ];
 
   // Fetch lectures on mount
   React.useEffect(() => {
@@ -77,7 +86,9 @@ export default function QuizEntry() {
     setTimeout(() => {
       setLoading(false);
       const noteIdsParam = selectedNoteIds.join(',');
-      navigate(`/quiz-mode?noteIds=${noteIdsParam}&n=${numQuestions}`);
+      navigate(`/quiz-mode?noteIds=${noteIdsParam}&n=${numQuestions}`, {
+        state: { timerDuration },
+      });
     }, 500);
   };
 
@@ -211,10 +222,8 @@ export default function QuizEntry() {
                 onChange={(e) => setNumQuestions(e.target.value)}
                 fullWidth
                 sx={{
-                  "& .MuiOutlinedInput-root": {
-                    height: "56px",
-                    borderRadius: 3,
-                  },
+                  mb: 3,
+                  "& .MuiOutlinedInput-root": { height: '56px', borderRadius: 3 },
                 }}
                 InputProps={{
                   startAdornment: (
@@ -225,6 +234,51 @@ export default function QuizEntry() {
                   inputProps: { min: 1, max: 50 },
                 }}
               />
+
+              {/* Timer selector */}
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, ml: 1 }}>
+                  <TimerIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                  <Typography variant="subtitle2" fontWeight={700} color="text.secondary"
+                    sx={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}
+                  >
+                    Time Per Question
+                  </Typography>
+                  {timerDuration === 0 && (
+                    <Chip label="No Timer" size="small" color="default"
+                      sx={{ fontWeight: 700, fontSize: '0.7rem', height: 20 }} />
+                  )}
+                </Box>
+                <ToggleButtonGroup
+                  value={timerDuration}
+                  exclusive
+                  onChange={(_, val) => { if (val !== null) setTimerDuration(val); }}
+                  fullWidth
+                  size="small"
+                  sx={{
+                    '& .MuiToggleButton-root': {
+                      fontWeight: 700, fontSize: '0.82rem', py: 1.2, borderRadius: '10px !important',
+                      border: '1px solid', borderColor: 'divider',
+                      flex: 1,
+                    },
+                    '& .Mui-selected': {
+                      background: 'linear-gradient(135deg, #137fec 0%, #10b981 100%) !important',
+                      color: 'white !important',
+                      borderColor: 'transparent !important',
+                    },
+                    gap: 0.75,
+                  }}
+                >
+                  {TIMER_OPTIONS.map((opt) => (
+                    <ToggleButton key={opt.value} value={opt.value}>
+                      {opt.value === 0 ? <AllInclusiveIcon sx={{ fontSize: 16 }} /> : opt.label}
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+                <Typography variant="caption" color="text.disabled" sx={{ mt: 0.75, ml: 1, display: 'block' }}>
+                  {timerDuration === 0 ? 'Unlimited time — answer at your own pace' : `${timerDuration} seconds per question — auto-submits on timeout`}
+                </Typography>
+              </Box>
             </Box>
 
             <Button

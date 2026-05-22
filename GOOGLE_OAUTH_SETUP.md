@@ -48,19 +48,14 @@
    - **Sites**: Move `localhost:8000` from Available to Chosen
    - Click **Save**
 
-## Step 3: Update Frontend Login Button
+## Step 3: Frontend Redirect URL
 
-The button is already configured to redirect to:
-```
-http://localhost:8000/api/auth/google/login/
-```
-
-However, the correct allauth URL is:
+The frontend Google login flow should redirect to:
 ```
 http://localhost:8000/accounts/google/login/
 ```
 
-I'll fix this in the Login.js file.
+This is the allauth endpoint expected by the current backend setup.
 
 ## Step 4: Test the Flow
 

@@ -1,35 +1,309 @@
-@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&family=Noto+Sans:wght@300;400;500;600;700&display=swap');
+﻿@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&family=Noto+Sans:wght@300;400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: #264653;
+  --teal: #2a9d8f;
+  --sand: #e9c46a;
+  --clay: #f4a261;
+  --coral: #e76f51;
+
+  --bg-canvas: #f6f1e6;
+  --bg-paper: #fffdf8;
+  --border: #e8dcc9;
+
+  --grad-primary: linear-gradient(135deg, #264653 0%, #2a9d8f 100%);
+  --grad-aurora: linear-gradient(135deg, #2a9d8f 0%, #e9c46a 45%, #f4a261 100%);
+  --grad-sunset: linear-gradient(135deg, #f4a261 0%, #e76f51 100%);
+  --grad-ocean: linear-gradient(135deg, #264653 0%, #2a9d8f 100%);
+  --grad-cosmic: linear-gradient(135deg, #e76f51 0%, #e9c46a 100%);
+  --grad-mint: linear-gradient(135deg, #2a9d8f 0%, #f4a261 100%);
+}
 
 html {
-  font-size: 90%; /* Global scale down */
+  font-size: 90%;
+  color: var(--ink);
 }
 
 body {
   margin: 0;
-  font-family: "Lexend", "Noto Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+  font-family:
+    "Lexend",
+    "Noto Sans",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color: var(--ink);
+  background-color: var(--bg-canvas);
+  background-image:
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(42, 157, 143, 0.12) 0%,
+      transparent 46%
+    ),
+    radial-gradient(
+      circle at 85% 12%,
+      rgba(233, 196, 106, 0.1) 0%,
+      transparent 42%
+    ),
+    radial-gradient(
+      circle at 74% 82%,
+      rgba(231, 111, 81, 0.1) 0%,
+      transparent 42%
+    );
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
 
-/* Custom Webkit Scrollbar */
+* {
+  box-sizing: border-box;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
-  height: 8px;
 }
+
 ::-webkit-scrollbar-track {
-  background: #101922; 
+  background: rgba(42, 157, 143, 0.08);
 }
+
 ::-webkit-scrollbar-thumb {
-  background: #233648; 
-  border-radius: 4px;
+  background: rgba(38, 70, 83, 0.35);
+  border-radius: 8px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: #3e526a; 
+  background: rgba(38, 70, 83, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes bounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-fade-in-left {
+  animation: fadeInLeft 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-fade-in-right {
+  animation: fadeInRight 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.gradient-text {
+  background: var(--grad-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-aurora {
+  background: var(--grad-aurora);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-sunset {
+  background: var(--grad-sunset);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bg-grad-primary {
+  background: var(--grad-primary);
+}
+
+.bg-grad-aurora {
+  background: var(--grad-aurora);
+}
+
+.bg-grad-sunset {
+  background: var(--grad-sunset);
+}
+
+.bg-grad-ocean {
+  background: var(--grad-ocean);
+}
+
+.bg-grad-cosmic {
+  background: var(--grad-cosmic);
+}
+
+.bg-grad-mint {
+  background: var(--grad-mint);
+}
+
+.glass {
+  background: rgba(255, 253, 248, 0.82);
+  border: 1px solid rgba(232, 220, 201, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-dark {
+  background: rgba(38, 70, 83, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.badge-blue,
+.badge-cyan {
+  background: rgba(38, 70, 83, 0.12);
+  color: var(--ink);
+  border: 1px solid rgba(38, 70, 83, 0.25);
+}
+
+.badge-violet,
+.badge-emerald {
+  background: rgba(42, 157, 143, 0.12);
+  color: var(--teal);
+  border: 1px solid rgba(42, 157, 143, 0.25);
+}
+
+.badge-amber {
+  background: rgba(233, 196, 106, 0.2);
+  color: #8c701a;
+  border: 1px solid rgba(233, 196, 106, 0.35);
+}
+
+.badge-rose {
+  background: rgba(231, 111, 81, 0.14);
+  color: var(--coral);
+  border: 1px solid rgba(231, 111, 81, 0.28);
+}
+
+.dot-loader {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.dot-loader span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out;
+}
+
+.dot-loader span:nth-child(1) {
+  background: var(--ink);
+}
+
+.dot-loader span:nth-child(2) {
+  background: var(--teal);
+  animation-delay: 0.2s;
+}
+
+.dot-loader span:nth-child(3) {
+  background: var(--clay);
+  animation-delay: 0.4s;
+}
+
+.nav-item-active {
+  background: linear-gradient(
+    90deg,
+    rgba(42, 157, 143, 0.12) 0%,
+    rgba(42, 157, 143, 0.04) 100%
+  ) !important;
+  box-shadow: inset 3px 0 0 var(--teal);
+}
+
+.page-enter {
+  animation: fadeInUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }

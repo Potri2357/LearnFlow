@@ -1,112 +1,135 @@
 import os
 import time
 import requests
-import google.generativeai as genai
 import logging
 
-# Configure logging
 logger = logging.getLogger(__name__)
+
 
 def generate_with_gemini(prompt, model_priority=None):
     """
-    Generates content using Gemini with automatic model fallback and retry logic.
-    
-    Args:
-        prompt (str): The prompt text to send to the model.
-        model_priority (list): Optional list of models to try in order. 
-                               Defaults to [gemini-1.5-flash, gemini-1.5-flash-8b, gemini-2.0-flash-exp, gemini-1.5-pro]
-    
+    Generates content using Gemini with smart retry and fallback logic.
+
+    - gemini-2.5-flash is the primary model (confirmed working on free tier)
+    - Daily quota exhaustion (RESOURCE_EXHAUSTED) → skip to next model immediately
+    - Per-minute rate limiting (other 429s) → wait & retry same model
+    - 404 / model gone → skip to next model immediately
+    - Timeout / 503 → retry with backoff
+
     Returns:
-        dict: The JSON response from the API (standard Gemini format).
-        
+        dict: Standard Gemini JSON response.
+
     Raises:
-        Exception: If all models fail or API key is missing.
+        Exception: If all models fail.
     """
-    
+
     if model_priority is None:
         model_priority = [
-            "gemini-2.0-flash",           # Fast, capable, available
-            "gemini-2.0-flash-lite",       # Lighter fallback
-            "gemini-1.5-flash",            # Stable fallback
-            "gemini-1.5-flash-8b",         # Cheapest fallback
-            "gemini-1.5-pro",              # High quality last resort
+            "gemini-2.5-flash",      # Primary - confirmed working on free tier
+            "gemini-2.0-flash",      # Fallback 1
+            "gemini-2.0-flash-001",  # Fallback 2
+            "gemini-2.0-flash-lite", # Fallback 3
+            "gemini-2.5-pro",        # Fallback 4 - higher quality
         ]
-    
+
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         raise Exception("GEMINI_API_KEY not found in environment variables")
-        
+
     base_url = "https://generativelanguage.googleapis.com/v1beta/models/"
-    
+
     last_error = None
-    
-    # Try the entire chain up to 3 times if global 429s occur
-    max_global_retries = 3
-    
-    for attempt in range(max_global_retries):
-        for i, model in enumerate(model_priority):
-            url = f"{base_url}{model}:generateContent?key={api_key}"
-            headers = {"Content-Type": "application/json"}
-            
-            # Consistent payload structure
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}]
-            }
-            
+
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.7,
+            "maxOutputTokens": 8192,
+        }
+    }
+
+    for model_index, model in enumerate(model_priority):
+        url = f"{base_url}{model}:generateContent?key={api_key}"
+        headers = {"Content-Type": "application/json"}
+
+        # Retry up to 3 times per model (for transient rate limits only)
+        for attempt in range(3):
             try:
-                # Increased timeout for complex AI generation (e.g. exam questions)
-                response = requests.post(url, json=payload, headers=headers, timeout=90)
-                
+                logger.info(f"Calling {model} (attempt {attempt + 1})")
+                response = requests.post(url, json=payload, headers=headers, timeout=120)
+
                 if response.status_code == 200:
-                    # Success!
+                    logger.info(f"Success with {model}")
                     return response.json()
-                
-                # Error Handling
+
                 if response.status_code == 429:
-                    print(f"Limit hit on {model} (429). Waiting 5s before switching...")
-                    time.sleep(5) # Backoff
-                    last_error = f"429 Rate Limit on {model}"
+                    try:
+                        err_data = response.json().get("error", {})
+                        err_status = err_data.get("status", "")
+                        err_msg = err_data.get("message", "")
+                    except Exception:
+                        err_status = ""
+                        err_msg = ""
+
+                    # RESOURCE_EXHAUSTED = daily quota gone for this model → skip to next
+                    if "RESOURCE_EXHAUSTED" in err_status or "quota" in err_msg.lower():
+                        logger.warning(f"Daily quota exhausted on {model}. Trying next model.")
+                        last_error = f"Quota exhausted on {model}"
+                        break  # Exit inner retry loop, go to next model
+
+                    # Per-minute rate limit → wait with exponential backoff then retry same model
+                    wait_s = 10 * (2 ** attempt)  # 10s, 20s, 40s
+                    logger.warning(f"Rate limited on {model} (attempt {attempt + 1}). Waiting {wait_s}s...")
+                    time.sleep(wait_s)
+                    last_error = f"Rate limited on {model}"
+                    # Continue to next attempt on same model
                     continue
-                
+
                 if response.status_code == 404:
-                    print(f"Model {model} unavailable (404). Switching...")
-                    last_error = f"404 Model {model} not found"
-                    continue
-                    
+                    logger.warning(f"Model {model} not found (404). Trying next model.")
+                    last_error = f"Model {model} not found"
+                    break  # Skip to next model
+
                 if response.status_code == 503:
-                    print(f"Service unavailable on {model} (503). Switching...")
-                    time.sleep(2)
+                    wait_s = 5 * (attempt + 1)
+                    logger.warning(f"Service unavailable on {model}. Waiting {wait_s}s...")
+                    time.sleep(wait_s)
                     last_error = f"503 Service Unavailable on {model}"
                     continue
-    
-                # Check if it's a 400 Bad Request (invalid argument) -> don't retry, just raise or log
+
                 if response.status_code == 400:
-                    print(f"Bad Request on {model}: {response.text}")
-                    last_error = f"400 Bad Request on {model}: {response.text}"
-                    continue
-                    
-                # Other errors: raise to catch below
+                    err_msg = ""
+                    try:
+                        err_msg = response.json().get("error", {}).get("message", response.text[:200])
+                    except Exception:
+                        err_msg = response.text[:200]
+                    logger.error(f"Bad request on {model}: {err_msg}")
+                    last_error = f"Bad request on {model}: {err_msg[:100]}"
+                    break  # Bad request - trying another model won't help unless prompt is huge
+
+                # Other status codes
                 response.raise_for_status()
-                
+
             except requests.exceptions.ReadTimeout:
-                 print(f"Timeout on {model}. Switching...")
-                 last_error = f"Timeout on {model}"
-                 continue
-            except Exception as e:
-                # Sanitize error message for Windows console
-                err_msg = str(e).encode('ascii', 'replace').decode('ascii')
-                print(f"Error with {model}: {err_msg}")
-                last_error = err_msg
+                logger.warning(f"Timeout on {model} (attempt {attempt + 1}).")
+                last_error = f"Timeout on {model}"
+                time.sleep(5)
                 continue
-        
-        # If we finished the loop without success, verify if we should global retry
-        # Only global retry if we hit rate limits? For now, we just retry the whole chain once more.
-        if attempt < max_global_retries - 1:
-            print(f"All models failed attempt {attempt+1}. Retrying chain in 5s...")
-            time.sleep(5)
-    
-    # If we get here, all models failed after retries
-    raise Exception(f"All Gemini models failed. Last error: {last_error}")
-    
-    # If we get here, all models failed
-    raise Exception(f"All Gemini models failed. Last error: {last_error}")
+
+            except requests.exceptions.ConnectionError as e:
+                logger.error(f"Connection error: {e}")
+                last_error = f"Connection error: {str(e)[:100]}"
+                time.sleep(3)
+                break
+
+            except Exception as e:
+                err_msg = str(e).encode('ascii', 'replace').decode('ascii')
+                logger.error(f"Error with {model}: {err_msg}")
+                last_error = err_msg
+                break
+
+    raise Exception(
+        f"All Gemini models failed. Last error: {last_error}. "
+        "If quota exhausted, wait until it resets (usually midnight Pacific Time) "
+        "or upgrade your Google AI Studio / Vertex AI plan."
+    )

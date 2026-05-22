@@ -15,9 +15,9 @@ from rest_framework import status, permissions
 from .models import (
     LectureNote, Question, UserAnswer, TopicWeakness,
     TopicMastery, UserStreak, StudyPlan, UserProgress, Notification, QuizAttempt,
-    ExamSyllabus, ExamConfiguration, UserProfile, StickyNote
+    ExamSyllabus, ExamConfiguration, UserProfile, StickyNote, Flashcard
 )
-from .serializers import LectureNoteSerializer, QuestionSerializer, UserAnswerSerializer
+from .serializers import LectureNoteSerializer, QuestionSerializer, UserAnswerSerializer, FlashcardSerializer
 from .ml_utils import extract_topics
 from .utils import extract_text_from_pdf
 
@@ -33,7 +33,7 @@ import time
 from datetime import timezone as dt_timezone
 
 import google.generativeai as genai
-from .ai_utils import generate_ai_content
+from .ai_utils import generate_ai_content, cached_generate_ai_content
 
 # Import exam preparation views
 from .exam_views import (
@@ -99,6 +99,23 @@ def get_quiz_questions(request, note_id):
         qs = Question.objects.filter(lecture_note_id=note_id).order_by("created_at")[:n]
         data = QuestionSerializer(qs, many=True).data
         return Response({"questions": data})
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_all_questions(request):
+    """
+    Returns all questions for the authenticated user, enriched with subject and lecture title.
+    """
+    questions = Question.objects.filter(lecture_note__user=request.user).select_related('lecture_note')
+    data = []
+    for q in questions:
+        q_data = QuestionSerializer(q).data
+        q_data['subject'] = q.lecture_note.subject if q.lecture_note.subject else "General"
+        q_data['lecture_title'] = q.lecture_note.title
+        # simple heuristic for HY (High Yield): difficulty > 0.7 or specific topics
+        q_data['is_high_yield'] = q.difficulty > 0.65
+        data.append(q_data)
+    return Response({"questions": data})
 
 
 @api_view(['POST'])
@@ -251,19 +268,14 @@ def upload_lecture_note(request):
 
 
 
-# API 2: Generate 20 Questions From Lecture Notes without ml
+# API 2: Generate Questions From Lecture Notes
 @csrf_exempt
 def generate_questions(request, note_id):
-    # ==== 1. Get Lecture Note ====
     note = get_object_or_404(LectureNote, id=note_id)
 
-    # ==== 2. High-quality MCQ prompt ====
-    mcq_prompt = f"""
-Generate exactly 5 high-quality MCQ questions from the following lecture content:
+    mcq_prompt = f"""Generate exactly 5 high-quality MCQ questions from the following lecture content:
 
-\"\"\"  
-{note.content}  
-\"\"\"
+\"\"\"{note.content}\"\"\"
 
 For each question, include:
 - A clear question
@@ -272,8 +284,7 @@ For each question, include:
 - An explanation for the correct answer
 - A difficulty score between 0.2 (easy) and 0.9 (hard)
 
-Return ONLY JSON in this format:
-
+Return ONLY a JSON array in this exact format (no markdown, no extra text):
 [
   {{
     "question": "What is ...?",
@@ -285,97 +296,61 @@ Return ONLY JSON in this format:
 ]
 """
 
-    # ==== 3. Send to AI (Strategy: Try Llama -> Fallback to Gemini) ====
-    output_text = ""
-    source = "Llama"
-    
+    # ==== Call AI ====
     try:
-        # 1. Try Llama (User Preference)
-        try:
-            output_text = generate_ai_content(mcq_prompt, model="meta-llama/llama-3.3-70b-instruct:free")
-            if not output_text or not output_text.strip():
-                raise Exception("Empty response from Llama")
-            
-            # Quick check if it looks like JSON
-            if "{" not in output_text and "[" not in output_text:
-                 raise Exception("Response does not look like JSON")
-                 
-            print("RAW Llama OUTPUT:", output_text)
-            
-        except Exception as e:
-            print(f"Llama Generation failed ({e}). Falling back to Gemini...")
-            source = "Gemini"
-            # 2. Fallback to Gemini
-            gemini_response = generate_with_gemini(mcq_prompt)
-            output_text = gemini_response["candidates"][0]["content"]["parts"][0]["text"]
-            print("RAW Gemini OUTPUT:", output_text)
-
+        output_text = generate_ai_content(mcq_prompt)
+        if not output_text or not output_text.strip():
+            return JsonResponse({"error": "AI returned an empty response. Please try again."}, status=500)
     except Exception as e:
-        return JsonResponse({"error": f"All AI Generation failed: {e}"}, status=500)
+        return JsonResponse({"error": f"AI generation failed: {str(e)}"}, status=500)
 
-    # ==== 4. Safe JSON parsing (handles bad output) ====
+    # ==== Safe JSON parsing ====
     try:
-        # Fix common formatting errors
         cleaned = output_text.strip()
-        
-        # Remove markdown code blocks
         if "```json" in cleaned:
             cleaned = cleaned.split("```json")[1].split("```")[0]
         elif "```" in cleaned:
-             cleaned = cleaned.split("```")[1].split("```")[0]
-             
+            cleaned = cleaned.split("```")[1].split("```")[0]
         cleaned = cleaned.strip()
-        questions_json = json.loads(cleaned)
 
-    except Exception:
-        return JsonResponse({
-            "error": "JSON parsing failed",
-            "raw_output": output_text,
-            "source": source
-        }, status=400)
-        
-        # Remove markdown code blocks
-        if "```json" in cleaned:
-            cleaned = cleaned.split("```json")[1].split("```")[0]
-        elif "```" in cleaned:
-             cleaned = cleaned.split("```")[1].split("```")[0]
-             
-        cleaned = cleaned.strip()
-        questions_json = json.loads(cleaned)
+        # Find the JSON array
+        start = cleaned.find("[")
+        end = cleaned.rfind("]")
+        if start != -1 and end != -1:
+            cleaned = cleaned[start:end + 1]
 
-    except Exception:
+        questions_json = json.loads(cleaned)
+    except Exception as e:
         return JsonResponse({
-            "error": "JSON parsing failed",
-            "raw_output": output_text
+            "error": "Failed to parse AI response as JSON.",
+            "raw_output": output_text[:500]
         }, status=400)
 
-    # ==== 5. Create Question objects ====
+    # ==== Create Question objects ====
     saved_questions = []
-
     for q in questions_json:
         try:
+            options = q.get("options", [])
             question = Question.objects.create(
                 lecture_note=note,
-                question_text=q["question"],
-                option_a=clean_option_text(q["options"][0]),
-                option_b=clean_option_text(q["options"][1]),
-                option_c=clean_option_text(q["options"][2]),
-                option_d=clean_option_text(q["options"][3]),
-                correct_option=q["correct"].strip().upper(),
+                question_text=q.get("question", ""),
+                option_a=clean_option_text(options[0]) if len(options) > 0 else "",
+                option_b=clean_option_text(options[1]) if len(options) > 1 else "",
+                option_c=clean_option_text(options[2]) if len(options) > 2 else "",
+                option_d=clean_option_text(options[3]) if len(options) > 3 else "",
+                correct_option=q.get("correct", "A").strip().upper(),
                 explanation=q.get("explanation", ""),
                 difficulty=float(q.get("difficulty", 0.5)),
             )
             saved_questions.append(QuestionSerializer(question).data)
-
         except Exception as e:
             print("ERROR saving question:", e)
-            continue  # skip bad entries
+            continue
 
-    # Create notification for question generation
     if saved_questions and note.user:
         Notification.objects.create(
             user=note.user,
-            message=f"✅ {len(saved_questions)} questions generated successfully for '{note.title}'! Ready to practice."
+            message=f"✅ {len(saved_questions)} questions generated for '{note.title}'! Ready to practice."
         )
 
     return JsonResponse({
@@ -881,6 +856,7 @@ def generate_study_plan(request):
         hours_per_day = request.data.get("hours_per_day")
         priority_subjects = request.data.get("priority_subjects", [])
         focus_weak_areas = request.data.get("focus_weak_areas", False)
+        exam_schedule = request.data.get("exam_schedule", [])
 
         note = get_object_or_404(LectureNote, id=note_id)
         user = request.user
@@ -911,6 +887,12 @@ def generate_study_plan(request):
             user_context += f"Priority Subjects (User Selected): {', '.join(priority_subjects) if isinstance(priority_subjects, list) else priority_subjects}\n"
         if focus_weak_areas:
             user_context += "EMPHASIS: Focus heavily on weak areas.\n"
+        if exam_schedule:
+            schedule_text = ", ".join([f"{item.get('subject', 'Unknown')} on {item.get('date', 'Unknown')}" for item in exam_schedule if isinstance(item, dict)])
+            if schedule_text:
+                user_context += f"Exam Schedule: {schedule_text}\n"
+            elif isinstance(exam_schedule, list) and len(exam_schedule) > 0 and isinstance(exam_schedule[0], str):
+                user_context += f"Exam Schedule: {', '.join(exam_schedule)}\n"
 
         prompt = f"""
 You are an AI tutor. Generate a structured study plan for the student based on the data below.
@@ -976,7 +958,7 @@ Rules:
         # Try primary model (verified available)
         try:
             # Returns plain text - use Mistral for speed
-            plan_text = generate_ai_content(prompt, model="mistralai/mistral-7b-instruct:free")
+            plan_text = cached_generate_ai_content('study_plan', prompt, model="mistralai/mistral-7b-instruct:free", lecture_note=note)
         except Exception as e:
             print(f"AI generation failed: {e}")
             raise e
@@ -1365,6 +1347,18 @@ def upload_pdf(request):
             content=final_content # Storing the CLEANED, COMPRESSED text
         )
 
+        # Detect Subject Automatically
+        try:
+            prompt = f"Analyze the following text and determine its academic subject (e.g. Physics, Biology, History, Computer Science, Literature, etc). Respond with EXACTLY ONE WORD representing the subject.\n\nText:\n{final_content[:3000]}"
+            subject = cached_generate_ai_content('detect_subject', prompt, model="mistralai/mistral-7b-instruct:free", lecture_note=note).strip()
+            # Clean up the subject string
+            subject = ''.join(c for c in subject if c.isalpha() or c.isspace()).strip()
+            if subject and len(subject) < 30:
+                note.subject = subject.title()
+                note.save()
+        except Exception as e:
+            print(f"Failed to detect subject: {e}")
+
         # extract topics and seed weakness + mastery
         topics = extract_topics(final_content)
 
@@ -1436,8 +1430,12 @@ For each question return a JSON object with EXACTLY these keys:
 - "correct_option": the letter of the correct option — exactly one of: "A", "B", "C", or "D"
 - "explanation": 1-3 sentence explanation of why the correct answer is right
 - "difficulty": "easy", "medium", or "hard"
+- "blooms_level": one of "remember", "understand", "apply", "analyze", "evaluate", "create"
+- "is_high_yield": boolean (true/false) indicating if this is a highly important concept
+- "relevance_score": integer 1-10
 
 Requirements:
+- Ensure a distribution across Bloom's Taxonomy levels (some recall, some application, some analysis).
 - Use markdown formatting in question_text and explanation where it improves clarity (**bold**, `code`, etc.)
 - All 4 options must be plausible. Only one is correct.
 - Cover diverse topics from throughout the content.
@@ -1457,13 +1455,16 @@ Return format:
     "option_d": "Fourth choice",
     "correct_option": "B",
     "explanation": "Because ...",
-    "difficulty": "medium"
+    "difficulty": "medium",
+    "blooms_level": "understand",
+    "is_high_yield": true,
+    "relevance_score": 8
   }}
 ]
 """
 
         try:
-            output_text = generate_ai_content(prompt)
+            output_text = cached_generate_ai_content('generate_mcqs', prompt, lecture_note=note)
         except Exception as e:
             return JsonResponse({"error": f"AI generation failed: {str(e)}", "details": "Check that your GEMINI_API_KEY is valid."}, status=500)
 
@@ -1499,7 +1500,11 @@ Return format:
                 option_d=item.get("option_d", ""),
                 correct_option=(item.get("correct_option") or "A").strip().upper()[:1],
                 explanation=item.get("explanation", ""),
-                difficulty=0.3 if item.get("difficulty") == "easy" else (0.85 if item.get("difficulty") == "hard" else 0.5)
+                difficulty=0.3 if item.get("difficulty") == "easy" else (0.85 if item.get("difficulty") == "hard" else 0.5),
+                blooms_level=item.get("blooms_level", "understand"),
+                question_type="mcq",
+                is_high_yield=item.get("is_high_yield", False),
+                relevance_score=item.get("relevance_score", 5.0)
             )
             saved.append(QuestionSerializer(q).data)
             # Ensure TopicMastery exists for this topic
@@ -1783,7 +1788,7 @@ Requirements:
 
         # Generate study aids via Gemini
         try:
-            output_text = generate_ai_content(prompt)
+            output_text = cached_generate_ai_content('generate_study_aids', prompt, lecture_note=note)
             if not output_text or not output_text.strip():
                 return Response({"error": "AI returned empty response. Please try again."}, status=500)
         except Exception as e:
@@ -1919,7 +1924,7 @@ def generate_flashcards(request):
     
     try:
         # Revert to robust model (70B) if Mistral failed
-        text = generate_ai_content(prompt)
+        text = cached_generate_ai_content('generate_flashcards', prompt, lecture_note=note)
         # text = response["candidates"][0]["content"]["parts"][0]["text"]
         
         # Clean JSON
@@ -1942,9 +1947,71 @@ def generate_flashcards(request):
             
         flashcards = json.loads(cleaned)
         
-        return Response({"flashcards": flashcards})
+        saved_flashcards = []
+        for fc in flashcards:
+            from .models import Flashcard
+            from .serializers import FlashcardSerializer
+            obj = Flashcard.objects.create(
+                user=request.user,
+                lecture_note=note,
+                front=fc.get("front", ""),
+                back=fc.get("back", "")
+            )
+            saved_flashcards.append(FlashcardSerializer(obj).data)
+            
+        return Response({"flashcards": saved_flashcards})
     except Exception as e:
         return Response({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_flashcards(request):
+    note_id = request.GET.get('note_id')
+    from .models import Flashcard
+    from .serializers import FlashcardSerializer
+    from django.utils import timezone
+    
+    qs = Flashcard.objects.filter(user=request.user)
+    if note_id:
+        qs = qs.filter(lecture_note_id=note_id)
+        
+    serializer = FlashcardSerializer(qs, many=True)
+    return Response(serializer.data)
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def review_flashcard(request, card_id):
+    from .models import Flashcard
+    from django.utils import timezone
+    import datetime
+    
+    card = get_object_or_404(Flashcard, id=card_id, user=request.user)
+    rating = request.data.get('rating') # 'again', 'hard', 'good', 'easy'
+    
+    # SM-2 Algorithm Implementation
+    if rating == 'again':
+        card.repetitions = 0
+        card.interval = 1
+        card.ease_factor = max(1.3, card.ease_factor - 0.2)
+    else:
+        if rating == 'hard':
+            card.ease_factor = max(1.3, card.ease_factor - 0.15)
+        elif rating == 'easy':
+            card.ease_factor += 0.15
+            
+        if card.repetitions == 0:
+            card.interval = 1
+        elif card.repetitions == 1:
+            card.interval = 6
+        else:
+            card.interval = int(card.interval * card.ease_factor)
+            
+        card.repetitions += 1
+        
+    card.next_review_date = timezone.now() + datetime.timedelta(days=card.interval)
+    card.save()
+    
+    return Response({"message": "Card updated successfully"})
 
 
 @api_view(['POST'])
@@ -1987,25 +2054,34 @@ Generate a JSON response with the following structure:
     }}
   ],
   "relationships": "A paragraph explaining how the key concepts relate to each other",
+  "actionable_insights": [
+    "Practical application or study tip derived from the lecture"
+  ],
+  "nuance_notes": [
+    "Subtle distinctions, common misconceptions, or advanced nuances mentioned in the content"
+  ],
   "flowchart": "Mermaid.js flowchart syntax showing the flow of concepts (use graph TD format)"
 }}
 
 Requirements:
-- Include 4-8 key concepts
-- Include 3-6 important definitions
-- Create a clear, logical flowchart that shows the progression and relationships of concepts
-- Use proper Mermaid.js syntax for the flowchart (graph TD or graph LR)
-- CRITICAL: Enclose ALL node labels in double quotes, e.g., A["Node Label"]
-- Do NOT use special characters (like :, -, (, )) in node labels unless they are inside quotes
-- Do NOT use semicolons at the end of lines
-- Make the flowchart visually clear with proper node labels
-- Return ONLY valid JSON, no markdown code blocks
+- Include 4-8 key concepts, focusing on the most critical takeaways.
+- Include 3-6 important definitions.
+- Provide 2-4 actionable insights or practical applications.
+- Provide 2-4 nuance notes that capture subtleties or common pitfalls.
+- Create a clear, logical flowchart that shows the progression and relationships of concepts.
+- Use proper Mermaid.js syntax for the flowchart (graph TD).
+- CRITICAL: Enclose ALL node labels in double quotes to prevent syntax errors, e.g., A["Node Label"]
+- Do NOT use special characters (like :, -, (, )) in node labels unless they are inside quotes.
+- Keep node labels concise (1-3 words max).
+- Do NOT use semicolons at the end of lines.
+- Make the flowchart visually clear with proper node connections.
+- Return ONLY valid JSON, no markdown code blocks or additional text.
 """
 
         try:
             # Use centralized utility for robust generation
             # Returns simple text now
-            raw_text = generate_ai_content(prompt).strip()
+            raw_text = cached_generate_ai_content('summarize_lecture', prompt, lecture_note=note).strip()
                 
         except Exception as e:
             traceback.print_exc()
@@ -2401,12 +2477,22 @@ def sticky_notes(request):
         qs = StickyNote.objects.filter(user=user)
         if lecture_id:
             qs = qs.filter(lecture_note_id=lecture_id)
+        
+        # Optionally filter by note_type
+        note_type = request.query_params.get('note_type')
+        if note_type:
+            qs = qs.filter(note_type=note_type)
+
         data = [{
             'id': n.id,
             'title': n.title,
             'content': n.content,
             'color': n.color,
             'lecture_note_id': n.lecture_note_id,
+            'note_type': n.note_type,
+            'is_pinned': n.is_pinned,
+            'page_number': n.page_number,
+            'source_text': n.source_text,
             'created_at': n.created_at.isoformat(),
             'updated_at': n.updated_at.isoformat(),
         } for n in qs]
@@ -2417,13 +2503,21 @@ def sticky_notes(request):
         content = request.data.get('content', '')
         color = request.data.get('color', '#FFF9C4')
         lecture_note_id = request.data.get('lecture_note_id')
+        note_type = request.data.get('note_type', 'lecture')
+        is_pinned = request.data.get('is_pinned', False)
+        page_number = request.data.get('page_number')
+        source_text = request.data.get('source_text', '')
 
         note = StickyNote.objects.create(
             user=user,
             title=title,
             content=content,
             color=color,
-            lecture_note_id=lecture_note_id if lecture_note_id else None
+            lecture_note_id=lecture_note_id if lecture_note_id else None,
+            note_type=note_type,
+            is_pinned=is_pinned,
+            page_number=page_number,
+            source_text=source_text
         )
         return Response({
             'id': note.id,
@@ -2431,6 +2525,10 @@ def sticky_notes(request):
             'content': note.content,
             'color': note.color,
             'lecture_note_id': note.lecture_note_id,
+            'note_type': note.note_type,
+            'is_pinned': note.is_pinned,
+            'page_number': note.page_number,
+            'source_text': note.source_text,
             'created_at': note.created_at.isoformat(),
             'updated_at': note.updated_at.isoformat(),
         }, status=201)
@@ -2452,6 +2550,15 @@ def sticky_note_detail(request, note_id):
             note.content = request.data['content']
         if 'color' in request.data:
             note.color = request.data['color']
+        if 'note_type' in request.data:
+            note.note_type = request.data['note_type']
+        if 'is_pinned' in request.data:
+            note.is_pinned = request.data['is_pinned']
+        if 'page_number' in request.data:
+            note.page_number = request.data['page_number']
+        if 'source_text' in request.data:
+            note.source_text = request.data['source_text']
+
         note.save()
         return Response({
             'id': note.id,
@@ -2459,6 +2566,10 @@ def sticky_note_detail(request, note_id):
             'content': note.content,
             'color': note.color,
             'lecture_note_id': note.lecture_note_id,
+            'note_type': note.note_type,
+            'is_pinned': note.is_pinned,
+            'page_number': note.page_number,
+            'source_text': note.source_text,
             'updated_at': note.updated_at.isoformat(),
         })
 

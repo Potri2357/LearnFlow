@@ -49,9 +49,9 @@ def concept_coach_chat(request):
         if not message:
             return Response({"error": "Message is required"}, status=400)
 
-        # Build conversation context (last 8 turns)
+        # Build conversation context (last 4 turns to control token usage)
         context_parts = []
-        for msg in chat_history[-8:]:
+        for msg in chat_history[-4:]:
             role = msg.get('role', 'user')
             content = msg.get('content', '').strip()
             if content:
@@ -98,11 +98,40 @@ Concept Coach AI (respond now as described above):"""
 
     except Exception as e:
         traceback.print_exc()
+        error_msg = str(e)
+
+        # Build a friendly user-facing message based on error type
+        error_lower = error_msg.lower()
+        if "quota" in error_lower or "resource_exhausted" in error_lower or "429" in error_lower:
+            user_message = (
+                "⚠️ **AI quota limit reached.**\n\n"
+                "The free tier request limit has been hit temporarily. "
+                "Please wait **1–2 minutes** and try again — the per-minute quota resets quickly.\n\n"
+                "*If this keeps happening, the daily quota may be exhausted (resets at midnight Pacific Time).*"
+            )
+        elif "api key" in error_lower or "authentication" in error_lower or "invalid" in error_lower:
+            user_message = (
+                "🔑 **API key issue detected.**\n\n"
+                "The Gemini API key appears to be invalid or missing. "
+                "Please check the `GEMINI_API_KEY` environment variable in your backend settings."
+            )
+        elif "timeout" in error_lower or "connection" in error_lower or "network" in error_lower:
+            user_message = (
+                "🌐 **Network issue.**\n\n"
+                "Could not reach the AI service. Please check your internet connection and try again."
+            )
+        else:
+            user_message = (
+                f"❌ **AI error:** {error_msg[:200]}\n\n"
+                "Please try again in a moment."
+            )
+
         return Response({
-            "response": "I encountered an unexpected error. Please try again.",
+            "response": user_message,
             "hints": [],
-            "suggestions": []
-        }, status=200)  # Return 200 so frontend shows the message gracefully
+            "suggestions": [],
+            "is_error": True
+        }, status=200)  # 200 so frontend renders it as a chat bubble
 
 
 @api_view(['POST'])

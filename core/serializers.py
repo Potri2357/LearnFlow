@@ -1,19 +1,43 @@
 # core/serializers.py
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import LectureNote, Question, UserAnswer, TopicWeakness
+from .models import LectureNote, Question, UserAnswer, TopicWeakness, Flashcard, StickyNote
 from .models import TopicMastery, UserStreak, UserProfile, Notification
 
 class LectureNoteSerializer(serializers.ModelSerializer):
     class Meta:
         model = LectureNote
-        fields = ['id', 'title', 'file', 'content', 'created_at', 'study_notes', 'formulas', 'key_points']
+        fields = ['id', 'title', 'subject', 'file', 'content', 'created_at', 'study_notes', 'formulas', 'key_points']
         read_only_fields = ['content', 'created_at', 'study_notes', 'formulas', 'key_points']
 
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
+        fields = [
+            'id', 'lecture_note', 'topic', 'question_text',
+            'option_a', 'option_b', 'option_c', 'option_d',
+            'correct_option', 'explanation', 'difficulty',
+            'blooms_level', 'question_type', 'is_high_yield',
+            'relevance_score', 'is_starred', 'attempt_count',
+            'correct_count', 'created_at',
+        ]
+
+
+class StickyNoteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StickyNote
+        fields = [
+            'id', 'lecture_note', 'title', 'content', 'color',
+            'note_type', 'is_pinned', 'page_number', 'source_text',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+class FlashcardSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Flashcard
         fields = "__all__"
+        read_only_fields = ['user', 'created_at']
 
 class UserAnswerSerializer(serializers.ModelSerializer):
     class Meta:
